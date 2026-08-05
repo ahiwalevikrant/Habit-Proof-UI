@@ -1,584 +1,247 @@
 "use client";
+import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api, HabitResponse, HabitCategory } from "@/services/api";
+const INITIAL_HABITS = [
+  { id: 1, name: "6AM HIIT Session", description: "", category: "fitness", selfieRequired: false, streak: 14, status: "Active", color: "#ff570e", glow: "#ff570e" },
+  { id: 2, name: "Philosophy Reading", description: "20 pages daily", category: "reading", selfieRequired: true, streak: 3, status: "Active", color: "#3b82f6", glow: "#3b82f6" },
+  { id: 3, name: "Deep Breath Protocol", description: "", category: "mindfulness", selfieRequired: false, streak: 0, status: "Rest Day", progress: 80, color: "#a855f7", glow: "#a855f7" },
+];
+
+const CATEGORIES = [
+  { key: "fitness", icon: "fitness_center", color: "#ff570e", bg: "rgba(255,87,14,0.2)", border: "rgba(255,87,14,0.4)" },
+  { key: "reading", icon: "menu_book", color: "#3b82f6", bg: "rgba(59,130,246,0.2)", border: "rgba(59,130,246,0.4)" },
+  { key: "mindfulness", icon: "self_improvement", color: "#a855f7", bg: "rgba(168,85,247,0.2)", border: "rgba(168,85,247,0.4)" },
+];
 
 export default function HabitsPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [habits, setHabits] = useState<HabitResponse[]>([]);
-  
-  // Modals / Detail Panel states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedHabit, setSelectedHabit] = useState<HabitResponse | null>(null);
+  const [habits, setHabits] = useState(INITIAL_HABITS);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("fitness");
+  const [newHabit, setNewHabit] = useState({ name: "", description: "", selfieRequired: true });
 
-  // Form Fields for Create
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<HabitCategory>("FITNESS");
-  const [requiresSelfie, setRequiresSelfie] = useState(true);
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
-
-  // Form Fields for Edit
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editCategory, setEditCategory] = useState<HabitCategory>("FITNESS");
-  const [editRequiresSelfie, setEditRequiresSelfie] = useState(true);
-  const [editStatus, setEditStatus] = useState<"ACTIVE" | "COMPLETED" | "ARCHIVED">("ACTIVE");
-
-  const [formError, setFormError] = useState("");
-  const [formLoading, setFormLoading] = useState(false);
-
-  useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push("/auth");
-      return;
-    }
-    loadHabits();
-  }, [router]);
-
-  const loadHabits = async () => {
-    try {
-      setLoading(true);
-      const data = await api.habits.list();
-      setHabits(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const saveHabit = () => {
+    if (!newHabit.name.trim()) return;
+    setHabits((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        name: newHabit.name,
+        description: newHabit.description,
+        category: selectedCategory,
+        selfieRequired: newHabit.selfieRequired,
+        streak: 0,
+        status: "Active",
+        color: "#ff570e",
+        glow: "#ff570e",
+      },
+    ]);
+    setShowModal(false);
+    setNewHabit({ name: "", description: "", selfieRequired: true });
   };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      setFormError("Title is required");
-      return;
-    }
-    try {
-      setFormLoading(true);
-      setFormError("");
-      await api.habits.create(title, description, category, requiresSelfie, startDate);
-      setShowCreateModal(false);
-      // Reset form
-      setTitle("");
-      setDescription("");
-      setCategory("FITNESS");
-      setRequiresSelfie(true);
-      loadHabits();
-    } catch (err: any) {
-      setFormError(err.message || "Failed to create habit");
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedHabit) return;
-    if (!editTitle.trim()) {
-      setFormError("Title is required");
-      return;
-    }
-    try {
-      setFormLoading(true);
-      setFormError("");
-      const updated = await api.habits.update(
-        selectedHabit.id,
-        editTitle,
-        editDescription,
-        editCategory,
-        editRequiresSelfie,
-        editStatus
-      );
-      setSelectedHabit(null);
-      loadHabits();
-    } catch (err: any) {
-      setFormError(err.message || "Failed to update habit");
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this habit? All check-in history will be lost.")) {
-      return;
-    }
-    try {
-      await api.habits.delete(id);
-      setSelectedHabit(null);
-      loadHabits();
-    } catch (err) {
-      alert("Failed to delete habit");
-    }
-  };
-
-  const openEdit = (habit: HabitResponse) => {
-    setSelectedHabit(habit);
-    setEditTitle(habit.title);
-    setEditDescription(habit.description || "");
-    setEditCategory(habit.category);
-    setEditRequiresSelfie(habit.requiresSelfie);
-    setEditStatus(habit.status);
-    setFormError("");
-  };
-
-  const getCategoryColor = (cat: string) => {
-    switch (cat) {
-      case "FITNESS": return "#fc5200";
-      case "READING": return "#3b82f6";
-      case "COOKING": return "#10b981";
-      case "STUDY": return "#a855f7";
-      case "MEDITATION": return "#ec4899";
-      case "SKINCARE": return "#06b6d4";
-      default: return "#6b7280";
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="screen-content flex-center" style={{ minHeight: "80vh" }}>
-        <div className="spinner"></div>
-        <style jsx>{`
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
 
   return (
-    <div className="screen-content">
-      {/* Page Header */}
-      <header className="page-header flex-row-center">
-        <h2>My Habits</h2>
-        <button className="add-btnBtn btn-primary" onClick={() => { setShowCreateModal(true); setFormError(""); }}>
-          + New Habit
-        </button>
+    <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
+      {/* Top App Bar */}
+      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+        <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">Habit-proof</h1>
+        <div className="flex items-center gap-3">
+          <button className="p-1 text-[#e5beb2] hover:opacity-80">
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
+          </button>
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#ac897e]/30 bg-[#353437] flex items-center justify-center">
+            <span className="material-symbols-outlined text-[#e5beb2]" style={{ fontSize: 18 }}>person</span>
+          </div>
+        </div>
       </header>
 
-      {/* Habit List */}
-      <div className="habit-list-container">
-        {habits.length === 0 ? (
-          <div className="card flex-center empty-card">
-            <p>You have no active habits yet.</p>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-              Click "+ New Habit" to create your tracking goals.
-            </p>
+      <main className="flex-1 px-4 pt-4 pb-28 space-y-5 w-full">
+        {/* Header */}
+        <section className="flex justify-between items-end gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#ffb59d] mb-0.5">Consistency engine</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight">My Habits</h2>
           </div>
-        ) : (
-          <div className="habits-grid">
-            {habits.map((habit) => (
-              <div 
-                key={habit.id} 
-                className="card card-hover habit-card"
-                onClick={() => openEdit(habit)}
-              >
-                <div className="habit-card-top flex-row-center">
-                  <div className="habit-meta-wrap">
-                    <span 
-                      className="category-dot" 
-                      style={{ background: getCategoryColor(habit.category) }}
-                    ></span>
-                    <span className="category-label">{habit.category}</span>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold uppercase active:scale-95 transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_12px_rgba(255,87,14,0.4)]"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            NEW HABIT
+          </button>
+        </section>
+
+        {/* Habit List */}
+        <div className="grid grid-cols-1 gap-3.5 w-full">
+          {habits.map((habit) => (
+            <div
+              key={habit.id}
+              className="glass-card rounded-2xl p-4 relative overflow-hidden group border border-[#353437]/60 bg-[#201f21]/80"
+            >
+              {/* Neon scan line on hover */}
+              <div className="neon-scan-line hidden group-hover:block" />
+
+              <div className="flex justify-between items-start gap-2 mb-3">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: habit.color, boxShadow: `0 0 8px ${habit.glow}` }}
+                  />
+                  <h3 className="text-base font-bold text-white truncate">{habit.name}</h3>
+                </div>
+                {habit.selfieRequired ? (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb59d]/10 border border-[#ffb59d]/20 text-[#ffb59d] flex-shrink-0">
+                    <span className="material-symbols-outlined icon-fill text-xs">face</span>
+                    Selfie Required
                   </div>
-                  <span className={`badge ${habit.status === "ACTIVE" ? "badge-success" : "badge-muted"}`}>
+                ) : (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={{
+                      background: habit.status === "Active" ? "rgba(78,222,163,0.1)" : "#353437",
+                      border: habit.status === "Active" ? "1px solid rgba(78,222,163,0.2)" : "1px solid rgba(172,137,126,0.1)",
+                      color: habit.status === "Active" ? "#4edea3" : "#e5beb2",
+                    }}
+                  >
                     {habit.status}
                   </span>
-                </div>
-
-                <div className="habit-card-body">
-                  <h3>{habit.title}</h3>
-                  {habit.description && <p className="desc">{habit.description}</p>}
-                </div>
-
-                <div className="habit-card-bottom flex-row-center">
-                  <span className="streak-badge">
-                    🔥 <strong>{habit.currentStreak}</strong> day streak
-                  </span>
-                  <span className="selfie-req-badge">
-                    {habit.requiresSelfie ? "📷 Photo Proof Required" : "📝 Note Check-In"}
-                  </span>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              <div className="flex items-center justify-between gap-2">
+                {habit.description ? (
+                  <p className="text-xs text-[#e5beb2] truncate flex-1 min-w-0">{habit.description}</p>
+                ) : (
+                  <div className="flex -space-x-1 flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-[#353437] border border-[#131315]" />
+                    <div className="w-5 h-5 rounded-full bg-[#201f21] border border-[#131315]" />
+                    <div className="w-5 h-5 rounded-full bg-[#ff570e]/20 border border-[#131315] text-[#ffb59d] text-[9px] font-bold flex items-center justify-center">
+                      +12
+                    </div>
+                  </div>
+                )}
+
+                {habit.progress !== undefined ? (
+                  <div className="flex items-center gap-2 flex-1 ml-3 min-w-0">
+                    <div className="h-1.5 flex-1 rounded-full overflow-hidden bg-[#201f21]">
+                      <div className="h-full bg-[#ff570e]" style={{ width: `${habit.progress}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-[#ffb59d]">{habit.progress}%</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-[#ffb59d] flex-shrink-0">
+                    <span className="material-symbols-outlined icon-fill text-lg">local_fire_department</span>
+                    <span className="text-xl font-extrabold">{String(habit.streak).padStart(2, "0")}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
 
       {/* Create Habit Modal */}
-      {showCreateModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content card glass">
-            <div className="modal-header flex-row-center">
-              <h3>Create New Habit</h3>
-              <button className="close-btn" onClick={() => setShowCreateModal(false)}>×</button>
-            </div>
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+        >
+          <div className="w-full max-w-[440px] rounded-t-3xl p-5 pb-10 shadow-2xl relative bg-[#1b1b1d] border-t border-[#5c4037]/40">
+            {/* Drag handle */}
+            <div
+              className="w-10 h-1 rounded-full mx-auto mb-6 bg-[#353437] cursor-pointer"
+              onClick={() => setShowModal(false)}
+            />
+            <header className="mb-6">
+              <h2 className="text-xl font-bold text-white tracking-tight">Initialize Habit</h2>
+              <p className="text-xs text-[#e5beb2] mt-0.5">Define your high-performance objective.</p>
+            </header>
 
-            <form onSubmit={handleCreate} className="modal-form">
-              {formError && <div className="error-banner">{formError}</div>}
-
-              <div className="input-group">
-                <label className="input-label">Habit Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 5K Run, Drink 3L Water"
-                  className="input-field"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveHabit(); }}>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Habit Title</label>
+                  <input
+                    className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
+                    placeholder="e.g. Morning Sprint"
+                    value={newHabit.name}
+                    onChange={(e) => setNewHabit((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Mission Parameters</label>
+                  <textarea
+                    className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e] resize-none"
+                    placeholder="Specify daily routine details..."
+                    rows={2}
+                    value={newHabit.description}
+                    onChange={(e) => setNewHabit((p) => ({ ...p, description: e.target.value }))}
+                  />
+                </div>
               </div>
 
-              <div className="input-group">
-                <label className="input-label">Description</label>
-                <textarea
-                  placeholder="What is your routine details?"
-                  className="input-field"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  style={{ minHeight: "80px", resize: "none" }}
-                />
+              {/* Category selector */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-2 block">Neural Category</label>
+                <div className="flex gap-3">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
+                      style={{
+                        background: selectedCategory === cat.key ? cat.bg : "transparent",
+                        border: `2px solid ${selectedCategory === cat.key ? cat.color : "rgba(92,64,55,0.3)"}`,
+                        boxShadow: selectedCategory === cat.key ? `0 0 12px ${cat.color}40` : "none",
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-lg" style={{ color: cat.color }}>{cat.icon}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="input-group">
-                <label className="input-label">Category</label>
-                <select 
-                  className="input-field select-field" 
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as HabitCategory)}
-                >
-                  <option value="FITNESS">Fitness</option>
-                  <option value="READING">Reading</option>
-                  <option value="COOKING">Cooking</option>
-                  <option value="STUDY">Study</option>
-                  <option value="MEDITATION">Meditation</option>
-                  <option value="SKINCARE">Skincare</option>
-                  <option value="CUSTOM">Custom</option>
-                </select>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Start Date</label>
-                <input
-                  type="date"
-                  className="input-field"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="checkbox-group">
-                <label className="checkbox-label">
+              {/* Selfie Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0e0e10] border border-[#5c4037]/20">
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 20 }}>fingerprint</span>
+                  <div>
+                    <p className="text-xs font-bold text-white">Require Selfie Verification</p>
+                    <p className="text-[10px] text-[#e5beb2]">Biometric proof of execution</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={requiresSelfie}
-                    onChange={(e) => setRequiresSelfie(e.target.checked)}
+                    className="sr-only peer"
+                    checked={newHabit.selfieRequired}
+                    onChange={(e) => setNewHabit((p) => ({ ...p, selfieRequired: e.target.checked }))}
                   />
-                  <span>Require Selfie Verification (Face Check-In)</span>
+                  <div
+                    className="w-10 h-5 rounded-full relative transition-colors"
+                    style={{ background: newHabit.selfieRequired ? "#ff570e" : "#353437" }}
+                  >
+                    <div
+                      className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all"
+                      style={{ left: newHabit.selfieRequired ? "calc(100% - 18px)" : "2px" }}
+                    />
+                  </div>
                 </label>
-                <p className="checkbox-hint">Requires capturing a photo proof with face biometric verification.</p>
               </div>
 
-              <button type="submit" className="btn btn-primary" disabled={formLoading}>
-                {formLoading ? "Creating..." : "Save Habit"}
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl text-sm font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)]"
+              >
+                Save Habit
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Edit Habit Detail Panel */}
-      {selectedHabit && (
-        <div className="modal-backdrop">
-          <div className="modal-content card glass">
-            <div className="modal-header flex-row-center">
-              <h3>Habit Details & Settings</h3>
-              <button className="close-btn" onClick={() => setSelectedHabit(null)}>×</button>
-            </div>
-
-            <form onSubmit={handleUpdate} className="modal-form">
-              {formError && <div className="error-banner">{formError}</div>}
-
-              <div className="input-group">
-                <label className="input-label">Habit Title</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Description</label>
-                <textarea
-                  className="input-field"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  style={{ minHeight: "80px", resize: "none" }}
-                />
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Category</label>
-                <select 
-                  className="input-field select-field" 
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value as HabitCategory)}
-                >
-                  <option value="FITNESS">Fitness</option>
-                  <option value="READING">Reading</option>
-                  <option value="COOKING">Cooking</option>
-                  <option value="STUDY">Study</option>
-                  <option value="MEDITATION">Meditation</option>
-                  <option value="SKINCARE">Skincare</option>
-                  <option value="CUSTOM">Custom</option>
-                </select>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">Status</label>
-                <select 
-                  className="input-field select-field" 
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
-              </div>
-
-              <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={editRequiresSelfie}
-                    onChange={(e) => setEditRequiresSelfie(e.target.checked)}
-                  />
-                  <span>Require Selfie Verification</span>
-                </label>
-              </div>
-
-              <div className="action-row">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary delete-action-btn"
-                  onClick={() => handleDelete(selectedHabit.id)}
-                >
-                  Delete Habit
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={formLoading}>
-                  {formLoading ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        .page-header {
-          margin-bottom: 8px;
-        }
-
-        .add-btnBtn {
-          width: auto;
-          padding: 8px 16px;
-        }
-
-        .habit-list-container {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-bottom: 40px;
-        }
-
-        .habits-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .habit-card {
-          cursor: pointer;
-          gap: 12px;
-        }
-
-        .habit-card:active {
-          transform: scale(0.98);
-        }
-
-        .habit-card-top {
-          font-size: 12px;
-        }
-
-        .habit-meta-wrap {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .category-label {
-          font-weight: 700;
-          font-size: 11px;
-          color: var(--text-muted);
-          letter-spacing: 0.5px;
-        }
-
-        .habit-card-body h3 {
-          font-size: 18px;
-          color: #ffffff;
-        }
-
-        .habit-card-body .desc {
-          margin-top: 4px;
-          font-size: 13px;
-        }
-
-        .habit-card-bottom {
-          font-size: 12px;
-        }
-
-        .streak-badge {
-          color: var(--primary);
-          font-weight: 600;
-        }
-
-        .selfie-req-badge {
-          color: var(--text-muted);
-          font-size: 11px;
-        }
-
-        .empty-card {
-          padding: 40px 20px;
-          border-style: dashed;
-          text-align: center;
-        }
-
-        /* Modal Settings */
-        .modal-backdrop {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.85);
-          backdrop-filter: blur(8px);
-          display: flex;
-          align-items: flex-end; /* Slides from bottom */
-          justify-content: center;
-          z-index: 2000;
-        }
-
-        .modal-content {
-          width: 100%;
-          max-width: 480px;
-          border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-          padding: 24px;
-          animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-          max-height: 90vh;
-          overflow-y: auto;
-          border-bottom: none;
-        }
-
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-
-        .modal-header {
-          border-bottom: 1px solid var(--border);
-          padding-bottom: 12px;
-          margin-bottom: 20px;
-        }
-
-        .close-btn {
-          border: none;
-          background: transparent;
-          color: var(--text-muted);
-          font-size: 28px;
-          cursor: pointer;
-        }
-
-        .modal-form {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .select-field {
-          appearance: none;
-          background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-          background-repeat: no-repeat;
-          background-position: right 14px center;
-          padding-right: 40px;
-        }
-
-        .checkbox-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .checkbox-label {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-
-        .checkbox-label input {
-          width: 18px;
-          height: 18px;
-          accent-color: var(--primary);
-        }
-
-        .checkbox-hint {
-          font-size: 11px;
-          color: var(--text-muted);
-          padding-left: 28px;
-        }
-
-        .action-row {
-          display: flex;
-          gap: 12px;
-          margin-top: 12px;
-        }
-
-        .delete-action-btn {
-          background: transparent;
-          color: var(--error);
-          border: 1px solid rgba(239, 68, 68, 0.25);
-        }
-
-        .delete-action-btn:hover {
-          background: rgba(239, 68, 68, 0.08) !important;
-          border-color: var(--error) !important;
-        }
-
-        .error-banner {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: var(--error);
-          padding: 12px;
-          border-radius: var(--radius-md);
-          font-size: 13px;
-        }
-      `}</style>
+      <BottomNav />
     </div>
   );
 }

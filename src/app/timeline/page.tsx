@@ -1,322 +1,235 @@
 "use client";
+import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api, HabitResponse, CheckInResponse } from "@/services/api";
+const TIMELINE_ENTRIES = [
+  {
+    id: 1,
+    day: "THU",
+    date: "JUL 9",
+    type: "WORKOUTS",
+    title: "Morning HIIT Session",
+    subtitle: "Workout Complete",
+    matchScore: 98,
+    imageUrl:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuDfyCP5XPOP_JNWLCEEAkXvYcxak6zvW0QXteY5sDRaV-xYZ92YLjOu0GHF0UsaeqkT0SNexyTaPOjVU_zNdl0dV6Xkn3mytirM9ufvWBNn5GOUN_5erqo94qD9G4UUqNfBZRyuCspOmc8Fahiuw6W6h2lSuBTy7lKS9MBdo7kch-tTtZ4WiKx2z02wgPgzNAndRV2dyb9KSqWX-x4quMTZfDGVORhOmWXO81K9mCc7G6bUyzDLuJF6jUowabuJQKP-nQKH_eeCv4Q",
+    details: [
+      { icon: "timer", text: "45 Minutes" },
+      { icon: "bolt", text: "482 Calories" },
+      { icon: "verified", text: "Biometric Verified", isVerified: true },
+    ],
+  },
+  {
+    id: 2,
+    day: "WED",
+    date: "JUL 8",
+    type: "MINDFULNESS",
+    title: "30-Min Deep Reading",
+    subtitle: "Evening Habit",
+    isSelfieLog: true,
+    detailsText: '"Atomic Habits - Chapter 4"',
+    details: [{ icon: "schedule", text: "21:45 PM" }],
+  },
+  {
+    id: 3,
+    day: "TUE",
+    date: "JUL 7",
+    type: "NUTRITION",
+    title: "Protein Target Reached",
+    subtitle: "Nutrition Goal",
+    matchScore: 92,
+    imageUrl:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBiSXN7tpdp9AXl529iV0dIcBObCLY09o8DAARKmx2jSZOLJiPZ2QWcP1StNAJkfAxVmQ3NK0NDFIf3RYpvKpxRg_g__mD3QYWNkbNiBeZSI_hKnmTt0a0p0uQkjEYyO3wgCzqiUvLdT0U0KHbZZhPldfECJO0LtrjiP_YKRFNkh-CnYbmZ8vYKnumDL2SDdy-bnoV-Im9B0KhLPeCiB4l3HVVHrJUXHxHKPui9AqGpN5YHZR3nP_FgOkzJt8OKYvSdb3iuseyVPGw",
+    details: [
+      { icon: "restaurant", text: "185g Protein Consumed" },
+      { icon: "photo_camera", text: "Visual Proof Logged" },
+    ],
+  },
+];
 
-interface ExtendedCheckIn extends CheckInResponse {
-  habitTitle: string;
-  category: string;
-}
+const FILTERS = ["ALL ACTIVITY", "WORKOUTS", "NUTRITION", "MINDFULNESS"];
 
 export default function TimelinePage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [timelineItems, setTimelineItems] = useState<ExtendedCheckIn[]>([]);
-  const [habits, setHabits] = useState<HabitResponse[]>([]);
-  const [selectedHabitId, setSelectedHabitId] = useState<number | "all">("all");
+  const [activeFilter, setActiveFilter] = useState("ALL ACTIVITY");
 
-  useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push("/auth");
-      return;
-    }
-    loadData();
-  }, [router]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const habitsList = await api.habits.list();
-      setHabits(habitsList);
-
-      // Fetch timeline check-ins for all habits
-      const allCheckins: ExtendedCheckIn[] = [];
-      
-      await Promise.all(
-        habitsList.map(async (habit) => {
-          try {
-            const res = await api.checkins.list(habit.id);
-            res.forEach((c) => {
-              allCheckins.push({
-                ...c,
-                habitTitle: habit.title,
-                category: habit.category,
-              });
-            });
-          } catch (e) {
-            console.error(`Failed to load checkins for habit ${habit.id}`, e);
-          }
-        })
-      );
-
-      // Sort by date desc
-      allCheckins.sort(
-        (a, b) => new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
-      );
-
-      setTimelineItems(allCheckins);
-    } catch (err) {
-      console.error("Failed to load timeline data", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getCategoryColor = (cat: string) => {
-    switch (cat) {
-      case "FITNESS": return "#fc5200";
-      case "READING": return "#3b82f6";
-      case "COOKING": return "#10b981";
-      case "STUDY": return "#a855f7";
-      case "MEDITATION": return "#ec4899";
-      case "SKINCARE": return "#06b6d4";
-      default: return "#6b7280";
-    }
-  };
-
-  const filteredItems = selectedHabitId === "all"
-    ? timelineItems
-    : timelineItems.filter(item => item.habitId === Number(selectedHabitId));
-
-  if (loading) {
-    return (
-      <div className="screen-content flex-center" style={{ minHeight: "80vh" }}>
-        <div className="spinner"></div>
-        <style jsx>{`
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
+  const filteredEntries = TIMELINE_ENTRIES.filter((entry) => {
+    if (activeFilter === "ALL ACTIVITY") return true;
+    return entry.type === activeFilter;
+  });
 
   return (
-    <div className="screen-content">
-      <header className="page-header flex-row-center">
-        <h2>Activity History</h2>
-        
-        {/* Habit filter selector */}
-        <select 
-          className="habit-filter-select"
-          value={selectedHabitId}
-          onChange={(e) => setSelectedHabitId(e.target.value === "all" ? "all" : Number(e.target.value))}
-        >
-          <option value="all">All Habits</option>
-          {habits.map(h => (
-            <option key={h.id} value={h.id}>{h.title}</option>
-          ))}
-        </select>
+    <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
+      {/* TopAppBar */}
+      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#353437] overflow-hidden border border-[#ffb59d]/20">
+            <img
+              className="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdmcWvCJFC254AGiwu6kC5NOF8kj71mS0TVAWPJyLDqLBwG0c-_EyQZ5tftTUdgsqZdngwDyhlg2F9qF5fQJRFHeUvdKaBwRZW-9BLJ3sXpTtiWpAn83-UeP4zcQoz2Z7FYHdWdaRhsDRiDhaGhRlinLW01ZE8PJDTqEBNNia29UtTYXoNGF2DvXRqYF_edA2uybZD-ZozUsbAQU9bMay9xMCbUyQ-lNFKx18nWQje6EsoxwMDvOEBkCZaMP3_9EcwcnkX9mH2uBY"
+              alt="Profile"
+            />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">
+            Habit-proof
+          </h1>
+        </div>
+        <button className="text-[#ffb59d] hover:opacity-80">
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
+        </button>
       </header>
 
-      {/* Timeline items list */}
-      <div className="timeline-container">
-        {filteredItems.length === 0 ? (
-          <div className="card flex-center empty-card">
-            <p>No check-in proofs recorded yet.</p>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-              Verify a habit activity to start building your timeline.
-            </p>
-          </div>
-        ) : (
-          <div className="timeline-thread">
-            {filteredItems.map((item, idx) => {
-              const isVerified = item.verificationStatus === "VERIFIED";
-              const checkInDate = new Date(item.checkInDate);
-              const formattedDate = checkInDate.toLocaleDateString([], {
-                weekday: 'short', month: 'short', day: 'numeric'
-              });
-              const formattedTime = checkInDate.toLocaleTimeString([], {
-                hour: '2-digit', minute: '2-digit'
-              });
+      <main className="flex-1 px-4 pt-4 pb-28 space-y-4 w-full">
+        {/* Section Header */}
+        <div>
+          <h2 className="text-lg font-bold text-white tracking-tight mb-2">Activity History</h2>
 
+          {/* Filters */}
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {FILTERS.map((filter) => {
+              const isActive = activeFilter === filter;
               return (
-                <div key={item.id} className="timeline-node">
-                  {/* Timeline branch connecting line */}
-                  {idx < filteredItems.length - 1 && <div className="timeline-connector"></div>}
-
-                  {/* Left Column: Date indicators */}
-                  <div className="timeline-time-col">
-                    <span className="date-tag">{formattedDate}</span>
-                    <span className="time-tag">{formattedTime}</span>
-                  </div>
-
-                  {/* Right Column: Card proof detail */}
-                  <div className="timeline-card-col">
-                    <div className="card glass history-card">
-                      <div className="card-top flex-row-center">
-                        <div className="habit-header-wrap">
-                          <span 
-                            className="category-dot" 
-                            style={{ background: getCategoryColor(item.category) }}
-                          ></span>
-                          <h3>{item.habitTitle}</h3>
-                        </div>
-                        <span className={`badge ${isVerified ? "badge-success" : "badge-danger"}`}>
-                          {item.verificationStatus}
-                        </span>
-                      </div>
-
-                      {item.proofUrl && (
-                        <div className="history-photo-wrap">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={item.proofUrl} alt="Checkin Proof" className="history-photo" />
-                          {item.faceMatchScore > 0 && (
-                            <div className="biometric-badge glass">
-                              👤 Match Score: {Math.round(item.faceMatchScore * 100)}%
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {item.note && (
-                        <p className="history-note">"{item.note}"</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
+                    isActive
+                      ? "bg-[#ff570e] text-[#511500] border-[#ff570e]"
+                      : "bg-[#2a2a2c] border-[#353437] text-[#e5beb2] hover:bg-[#353437]"
+                  }`}
+                >
+                  {filter}
+                </button>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
 
-      <style jsx>{`
-        .habit-filter-select {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          color: var(--text-main);
-          padding: 8px 12px;
-          border-radius: var(--radius-sm);
-          font-size: 13px;
-          outline: none;
-          max-width: 140px;
-          appearance: none;
-          background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-          background-repeat: no-repeat;
-          background-position: right 8px center;
-          padding-right: 28px;
-        }
+        {/* Timeline Container */}
+        <div className="relative pl-10">
+          {/* Vertical Line */}
+          <div className="absolute left-4 top-2 bottom-0 w-px bg-[#353437]" />
 
-        .timeline-container {
-          margin-bottom: 40px;
-        }
+          {filteredEntries.map((entry) => (
+            <div key={entry.id} className="relative mb-5 group">
+              {/* Node Dot */}
+              <div
+                className={`absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#131315] z-10 ${
+                  entry.type === "WORKOUTS"
+                    ? "bg-[#ff570e]"
+                    : entry.type === "NUTRITION"
+                    ? "bg-[#ffb95f]"
+                    : "bg-[#e5beb2]/50"
+                }`}
+              />
 
-        .empty-card {
-          padding: 40px 20px;
-          border-style: dashed;
-          text-align: center;
-        }
+              {/* Date Label */}
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-[#ffb59d]">{entry.day}</span>
+                <span className="text-xs font-bold text-white">{entry.date}</span>
+              </div>
 
-        .timeline-thread {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-          position: relative;
-        }
+              {/* Content Card */}
+              {entry.imageUrl ? (
+                /* Card with image */
+                <div className="glass-card rounded-2xl p-3 border border-[#353437]/60 bg-[#201f21]/80 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-wider block ${
+                          entry.type === "WORKOUTS" ? "text-[#4edea3]" : "text-[#ffb95f]"
+                        }`}
+                      >
+                        {entry.subtitle}
+                      </span>
+                      <h3 className="text-xs font-bold text-white">
+                        {entry.title}
+                      </h3>
+                    </div>
+                    {entry.matchScore && (
+                      <div className="bg-[#00a572]/15 px-2 py-0.5 rounded-full border border-[#00a572]/30">
+                        <span className="text-[9px] font-bold text-[#4edea3]">
+                          {entry.matchScore}% MATCH
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-        .timeline-node {
-          display: flex;
-          gap: 16px;
-          position: relative;
-        }
+                  <div className="flex gap-3 items-center">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#353437] flex-shrink-0">
+                      <img
+                        className="w-full h-full object-cover"
+                        src={entry.imageUrl}
+                        alt={entry.title}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      {entry.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center gap-1.5 text-[10px] ${
+                            detail.isVerified ? "text-[#4edea3]" : "text-[#e5beb2]"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-xs">
+                            {detail.icon}
+                          </span>
+                          <span className="truncate">{detail.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Text-only card */
+                <div className="glass-card rounded-2xl p-3 border border-[#353437]/60 bg-[#201f21]/80 space-y-2 border-dashed">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-[#e5beb2] block">
+                        {entry.subtitle}
+                      </span>
+                      <h3 className="text-xs font-bold text-white">
+                        {entry.title}
+                      </h3>
+                    </div>
+                    {entry.isSelfieLog && (
+                      <div className="bg-[#353437] px-2 py-0.5 rounded-full border border-white/10">
+                        <span className="text-[9px] font-bold text-[#e5beb2]">
+                          SELFIE LOG
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-        .timeline-connector {
-          position: absolute;
-          left: 60px;
-          top: 36px;
-          bottom: -36px;
-          width: 2px;
-          background: var(--border);
-          z-index: 1;
-        }
+                  <div className="flex gap-3 items-center">
+                    <div className="w-16 h-16 rounded-xl border border-[#353437] bg-[#1b1b1d] flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-[#ac897e] text-xl">
+                        menu_book
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      {entry.detailsText && (
+                        <p className="text-[10px] text-[#e5beb2] italic truncate">
+                          {entry.detailsText}
+                        </p>
+                      )}
+                      {entry.details.map((detail, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[10px] text-[#e5beb2]">
+                          <span className="material-symbols-outlined text-xs">
+                            {detail.icon}
+                          </span>
+                          <span className="truncate">{detail.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </main>
 
-        .timeline-time-col {
-          width: 60px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 4px;
-          text-align: right;
-          padding-top: 14px;
-          flex-shrink: 0;
-          z-index: 2;
-        }
-
-        .date-tag {
-          font-size: 11px;
-          font-weight: 700;
-          color: #ffffff;
-          letter-spacing: -0.2px;
-        }
-
-        .time-tag {
-          font-size: 10px;
-          color: var(--text-muted);
-        }
-
-        .timeline-card-col {
-          flex: 1;
-          z-index: 2;
-        }
-
-        .history-card {
-          padding: 16px;
-          gap: 12px;
-        }
-
-        .habit-header-wrap {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .habit-header-wrap h3 {
-          font-size: 14px;
-          color: #ffffff;
-        }
-
-        .history-photo-wrap {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 16/10;
-          border-radius: var(--radius-md);
-          overflow: hidden;
-          background: #000;
-        }
-
-        .history-photo {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .biometric-badge {
-          position: absolute;
-          bottom: 10px;
-          left: 10px;
-          font-size: 10px;
-          font-weight: 600;
-          color: #ffffff;
-          padding: 4px 8px;
-          border-radius: 4px;
-        }
-
-        .history-note {
-          font-size: 13px;
-          font-style: italic;
-          color: var(--text-muted);
-          border-left: 2px solid var(--border);
-          padding-left: 8px;
-        }
-      `}</style>
+      <BottomNav />
     </div>
   );
 }

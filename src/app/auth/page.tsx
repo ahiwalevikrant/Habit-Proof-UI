@@ -1,248 +1,139 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/services/api";
 
 export default function AuthPage() {
-  const router = useRouter();
-  const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    // If already logged in, redirect to dashboard
-    if (api.auth.isAuthenticated()) {
-      router.push("/");
-    }
-  }, [router]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
-
-    try {
-      if (isLogin) {
-        await api.auth.login(email, password);
-      } else {
-        if (!name) {
-          setError("Name is required");
-          setLoading(false);
-          return;
-        }
-        await api.auth.signup(name, email, password);
-      }
-      router.push("/");
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      setDone(true);
+      setTimeout(() => router.push("/"), 600);
+    }, 1500);
   };
 
   return (
-    <div className="auth-container screen-content">
-      <div className="brand-header float-anim">
-        <div className="brand-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-        </div>
-        <h1 className="brand-title">HABIT<span>PROOF</span></h1>
-        <p className="brand-subtitle">Level up your fitness. Prove your consistency.</p>
-      </div>
+    <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-10 relative overflow-hidden bg-[#131315] text-[#e5e1e4]">
+      {/* Atmospheric glow blobs */}
+      <div className="glow-accent" style={{ top: -100, left: -100 }} />
+      <div className="glow-accent" style={{ bottom: -100, right: -100 }} />
 
-      <div className="card glass auth-card">
-        <div className="tabs-header">
-          <button 
-            className={`tab-btn ${isLogin ? "active" : ""}`}
-            onClick={() => { setIsLogin(true); setError(""); }}
+      {/* Logo */}
+      <header className="mb-6 flex flex-col items-center animate-fade-in z-10 text-center">
+        <div className="mb-3 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#ff570e] shadow-[0_0_20px_rgba(255,87,14,0.5)]">
+          <span className="material-symbols-outlined icon-fill text-white" style={{ fontSize: 28 }}>bolt</span>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tighter uppercase text-white">
+          HABIT<span className="text-[#ff570e]">PROOF</span>
+        </h1>
+        <p className="text-[10px] uppercase tracking-widest mt-0.5 text-[#e5beb2]/70 font-semibold">
+          Elite Habit Engineering
+        </p>
+      </header>
+
+      {/* Auth Card */}
+      <main className="w-full glass-card rounded-2xl p-5 border border-[#353437]/60 bg-[#201f21]/80 z-10">
+        {/* Tabs */}
+        <div className="flex border-b border-[#353437]/50 mb-5">
+          <button
+            onClick={() => setTab("login")}
+            className="flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-all duration-200"
+            style={{
+              color: tab === "login" ? "#ffb59d" : "#e5beb2",
+              borderBottom: tab === "login" ? "2px solid #ffb59d" : "2px solid transparent",
+            }}
           >
             Log In
           </button>
-          <button 
-            className={`tab-btn ${!isLogin ? "active" : ""}`}
-            onClick={() => { setIsLogin(false); setError(""); }}
+          <button
+            onClick={() => setTab("signup")}
+            className="flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-all duration-200"
+            style={{
+              color: tab === "signup" ? "#ffb59d" : "#e5beb2",
+              borderBottom: tab === "signup" ? "2px solid #ffb59d" : "2px solid transparent",
+            }}
           >
             Sign Up
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          {error && <div className="error-banner">{error}</div>}
-
-          {!isLogin && (
-            <div className="input-group">
-              <label className="input-label">Full Name</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {tab === "signup" && (
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Full Name</label>
               <input
                 type="text"
-                placeholder="John Doe"
-                className="input-field"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required={!isLogin}
+                required
+                placeholder="Vikrant Ahiwale"
+                className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
               />
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Athlete Email</label>
             <input
               type="email"
-              placeholder="you@example.com"
-              className="input-field"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               required
+              placeholder="athlete@habitproof.com"
+              className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
             />
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]">Passcode</label>
+              {tab === "login" && (
+                <a href="#" className="text-[9px] text-[#ffb59d] hover:underline">Forgot?</a>
+              )}
+            </div>
             <input
               type="password"
-              placeholder="••••••••"
-              className="input-field"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               required
+              placeholder="••••••••"
+              className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
             />
           </div>
 
-          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 mt-2 rounded-xl text-xs font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)] flex items-center justify-center gap-2"
+          >
             {loading ? (
-              <span className="spinner"></span>
-            ) : isLogin ? (
-              "Access Dashboard"
+              <>
+                <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                Authenticating...
+              </>
+            ) : done ? (
+              <>
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                Verified
+              </>
+            ) : tab === "login" ? (
+              "Enter System"
             ) : (
               "Create Account"
             )}
           </button>
+
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={() => router.push("/verify")}
+              className="text-[10px] text-[#e5beb2] hover:text-[#ffb59d] transition-colors flex items-center justify-center gap-1 mx-auto"
+            >
+              <span className="material-symbols-outlined text-sm text-[#ffb59d]">fingerprint</span>
+              Biometric Fast Pass
+            </button>
+          </div>
         </form>
-      </div>
-
-      <style jsx>{`
-        .auth-container {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 40px 24px;
-          background: radial-gradient(circle at top, rgba(252, 82, 0, 0.08) 0%, transparent 70%);
-        }
-
-        .brand-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          margin-bottom: 32px;
-        }
-
-        .brand-logo {
-          width: 64px;
-          height: 64px;
-          background: linear-gradient(135deg, var(--primary) 0%, #ff6b3d 100%);
-          color: #ffffff;
-          border-radius: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 24px rgba(252, 82, 0, 0.3);
-          margin-bottom: 16px;
-        }
-
-        .brand-title {
-          font-size: 28px;
-          font-weight: 800;
-          letter-spacing: -1px;
-          color: #ffffff;
-        }
-
-        .brand-title span {
-          color: var(--primary);
-        }
-
-        .brand-subtitle {
-          font-size: 13px;
-          color: var(--text-muted);
-          margin-top: 4px;
-        }
-
-        .auth-card {
-          width: 100%;
-          max-width: 380px;
-          padding: 24px;
-        }
-
-        .tabs-header {
-          display: flex;
-          background: var(--bg-input);
-          padding: 4px;
-          border-radius: var(--radius-md);
-          border: 1px solid var(--border);
-          margin-bottom: 24px;
-        }
-
-        .tab-btn {
-          flex: 1;
-          padding: 10px;
-          font-weight: 600;
-          font-size: 13px;
-          border-radius: calc(var(--radius-md) - 2px);
-          border: none;
-          background: transparent;
-          color: var(--text-muted);
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .tab-btn.active {
-          background: var(--bg-card);
-          color: #ffffff;
-          box-shadow: var(--shadow-sm);
-        }
-
-        .auth-form {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .error-banner {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: var(--error);
-          padding: 12px;
-          border-radius: var(--radius-md);
-          font-size: 13px;
-          font-weight: 500;
-        }
-
-        .auth-submit {
-          margin-top: 8px;
-          height: 48px;
-        }
-
-        .spinner {
-          display: inline-block;
-          width: 20px;
-          height: 20px;
-          border: 3px solid rgba(255,255,255,0.3);
-          border-radius: 50%;
-          border-top-color: #ffffff;
-          animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      </main>
     </div>
   );
 }

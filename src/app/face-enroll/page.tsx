@@ -1,431 +1,158 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api, FaceStatusResponse } from "@/services/api";
+import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
 export default function FaceEnrollPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
-  const [status, setStatus] = useState<FaceStatusResponse | null>(null);
-  
-  // Form states
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [enrollMessage, setEnrollMessage] = useState("Initializing facial mapping...");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [status, setStatus] = useState<"required" | "registering" | "success">("required");
 
-  useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push("/auth");
-      return;
-    }
-    loadFaceStatus();
-  }, [router]);
-
-  const loadFaceStatus = async () => {
-    try {
-      setLoading(true);
-      const data = await api.face.getStatus();
-      setStatus(data);
-    } catch (err) {
-      console.error("Failed to load face status", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleRegister = () => {
+    setStatus("registering");
+    setTimeout(() => {
+      setStatus("success");
+    }, 2000);
   };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
-      setError("");
-      setSuccess(false);
-    }
-  };
-
-  // Scanning messaging animations
-  useEffect(() => {
-    if (!enrolling) return;
-
-    const messages = [
-      "Detecting face boundary...",
-      "Mapping 128 biometric facial landmarks...",
-      "Generating master face mathematical vector...",
-      "Storing encrypted vector in biometric vault...",
-      "Verifying enrollment integrity...",
-    ];
-
-    let currentIdx = 0;
-    const interval = setInterval(() => {
-      if (currentIdx < messages.length - 1) {
-        currentIdx++;
-        setEnrollMessage(messages[currentIdx]);
-      }
-    }, 450);
-
-    return () => clearInterval(interval);
-  }, [enrolling]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) {
-      setError("Please capture a face selfie photo first.");
-      return;
-    }
-
-    try {
-      setEnrolling(true);
-      setError("");
-      
-      const res = await api.face.enroll(file);
-      setStatus(res);
-      setSuccess(true);
-      setFile(null);
-      setPreviewUrl(null);
-    } catch (err: any) {
-      setError(err.message || "Face enrollment failed. Please try again.");
-    } finally {
-      setEnrolling(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="screen-content flex-center" style={{ minHeight: "80vh" }}>
-        <div className="spinner"></div>
-        <style jsx>{`
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (enrolling) {
-    return (
-      <div className="screen-content flex-center scanning-screen">
-        <div className="scanner-outer">
-          <div className="scan-container">
-            <div className="scan-line"></div>
-            {previewUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt="Enrolling" className="scanning-img" />
-            )}
-          </div>
-        </div>
-        <div className="scanning-status float-anim">
-          <div className="loading-dots">
-            <span></span><span></span><span></span>
-          </div>
-          <p className="scan-status-text">{enrollMessage}</p>
-        </div>
-
-        <style jsx>{`
-          .scanning-screen {
-            min-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-          }
-          .scanner-outer {
-            width: 260px;
-            height: 260px;
-            border: 4px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 8px;
-            background: #141417;
-            box-shadow: var(--shadow-glow);
-          }
-          .scan-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            overflow: hidden;
-            border-radius: calc(var(--radius-lg) - 8px);
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .scanning-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.65;
-          }
-          .scanning-status {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-          }
-          .scan-status-text {
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 15px;
-          }
-          .loading-dots {
-            display: flex;
-            gap: 6px;
-          }
-          .loading-dots span {
-            width: 8px;
-            height: 8px;
-            background: var(--primary);
-            border-radius: 50%;
-            animation: bounce 1.2s infinite;
-          }
-          .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-          .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-          @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  const isEnrolled = status?.enrolled;
 
   return (
-    <div className="screen-content">
-      <header className="page-header">
-        <h2>Face biometrics</h2>
-        <p>Manage your Face ID enrollment for selfie habit proofs.</p>
+    <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
+      {/* TopAppBar */}
+      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#353437] flex items-center justify-center overflow-hidden border border-[#ffb59d]/20">
+            <span className="material-symbols-outlined text-[#e5beb2]" style={{ fontSize: 18 }}>person</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">
+            Habit-proof
+          </h1>
+        </div>
+        <button className="text-[#e5beb2] hover:opacity-80">
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
+        </button>
       </header>
 
-      {/* Current Enrollment Status Card */}
-      <div className="card glass status-indicator-card">
-        <div className="flex-row-center">
-          <div className="status-label-wrap">
-            <span className={`status-dot ${isEnrolled ? "active" : "inactive"}`}></span>
-            <h3>Biometric ID: {isEnrolled ? "Registered" : "Not Configured"}</h3>
-          </div>
-          <span className={`badge ${isEnrolled ? "badge-success" : "badge-warning"}`}>
-            {isEnrolled ? "Enrolled" : "Setup Required"}
-          </span>
-        </div>
-
-        {isEnrolled ? (
-          <p className="status-desc">
-            Your face profile was registered successfully on {status.enrollmentDate ? new Date(status.enrollmentDate).toLocaleDateString() : "recent date"}. 
-            You can verify habits requiring photo checks.
-          </p>
-        ) : (
-          <p className="status-desc">
-            You must register your face biometrics before you can check in to any habits that require photo proofs.
-          </p>
-        )}
-      </div>
-
-      {success && (
-        <div className="card success-banner">
-          <div className="banner-icon">✓</div>
-          <div>
-            <h3>Enrollment Saved!</h3>
-            <p>Your biometric Face ID signature has been recorded successfully.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Face enrollment setup form */}
-      <div className="card glass setup-card">
-        <h3>{isEnrolled ? "Update Face Profile" : "Register Biometric ID"}</h3>
-        <p style={{ fontSize: "13px" }}>
-          To enroll, take a clear photo of your face. Make sure your face is well-lit, you look straight at the camera, and remove any sunglasses or masks.
-        </p>
-
-        <form onSubmit={handleSubmit} className="setup-form">
-          {error && <div className="error-banner">{error}</div>}
-
-          <div className="upload-container">
-            {previewUrl ? (
-              <div className="preview-wrap">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="Biometric Preview" className="preview-image" />
-                <button 
-                  type="button" 
-                  className="change-img-btn"
-                  onClick={() => { setFile(null); setPreviewUrl(null); }}
-                >
-                  Discard Photo
-                </button>
+      {/* Main Content Area */}
+      <main className="flex-1 px-4 pt-4 pb-28 space-y-4 w-full flex flex-col justify-between">
+        <div className="space-y-3">
+          {/* Status Indicator */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#1b1b1d] border border-[#5c4037]/30">
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex items-center justify-center">
+                <span className="material-symbols-outlined text-[#ffb95f]" style={{ fontSize: 22 }}>fingerprint</span>
+                {status !== "success" && (
+                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#ca8100] rounded-full border-2 border-[#131315] animate-pulse" />
+                )}
               </div>
-            ) : (
-              <label className="file-dropzone">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  capture="user" 
-                  className="file-input"
-                  onChange={handleFileChange}
-                  required
-                />
-                <div className="dropzone-inner flex-center">
-                  <span className="dropzone-icon">👤</span>
-                  <h3>Capture Face Selfie</h3>
-                  <p>Tap to open front camera</p>
-                </div>
-              </label>
-            )}
+              <div>
+                <p className="text-[9px] font-bold text-[#ffb95f] tracking-wider uppercase">
+                  Status
+                </p>
+                <h2 className="text-xs font-bold text-white">
+                  {status === "required" && "Setup Required"}
+                  {status === "registering" && "Enrolling..."}
+                  {status === "success" && "Enrolled"}
+                </h2>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-[#ac897e]" style={{ fontSize: 18 }}>info</span>
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={!file}
-          >
-            {isEnrolled ? "Overwrite Biometric ID" : "Register Biometrics"}
-          </button>
-        </form>
-      </div>
+          {/* Camera Enrollment Frame */}
+          <section className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-[#353437] bg-black shadow-2xl">
+            {/* Simulated Camera Feed Image */}
+            <div
+              className="absolute inset-0 w-full h-full bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCEBHfHEiK1peIIMnqiBD8ODeyKFyp_-RoR9p_RyxIxuVw4K0a-SsjITSahMEI1AW6GkXYBs5TFleDYwrL3WoCrHJOeLVk9vYa05yjbPSrmLJef0OnOsE_XQaPQRxOi8NnKNdmlRE1v_kCc5w9o-5hZACOm4XaDgbIXzcv4RFHAlYQS8SjF3xraj1KCac9wYl17pwCx_io1sWSdlihFa4orSjyGw4V5W75pL7aKdhk6HAS-BYRwRCPx2NqbDmP8muaxMbrZCYJ7jGk')",
+              }}
+            />
+            {/* Camera Overlay Gradient */}
+            <div className="absolute inset-0 camera-overlay" />
 
-      <style jsx>{`
-        .status-indicator-card {
-          padding: 20px;
-        }
-        .status-label-wrap {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .status-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-        }
-        .status-dot.active {
-          background: var(--success);
-          box-shadow: 0 0 8px var(--success);
-        }
-        .status-dot.inactive {
-          background: var(--warning);
-          box-shadow: 0 0 8px var(--warning);
-        }
-        .status-desc {
-          font-size: 13px;
-        }
-        .setup-card {
-          padding: 20px;
-          gap: 16px;
-          margin-bottom: 40px;
-        }
-        .setup-form {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .upload-container {
-          width: 100%;
-        }
-        .file-dropzone {
-          display: block;
-          width: 100%;
-          border: 2px dashed var(--border);
-          border-radius: var(--radius-md);
-          background: var(--bg-input);
-          cursor: pointer;
-          transition: var(--transition);
-        }
-        .file-dropzone:hover {
-          border-color: var(--primary);
-          background: rgba(252, 82, 0, 0.02);
-        }
-        .dropzone-inner {
-          flex-direction: column;
-          padding: 40px 16px;
-          gap: 8px;
-          text-align: center;
-        }
-        .dropzone-icon {
-          font-size: 36px;
-        }
-        .dropzone-inner h3 {
-          font-size: 15px;
-          color: #ffffff;
-        }
-        .file-input {
-          display: none;
-        }
-        .preview-wrap {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 1;
-          border-radius: var(--radius-md);
-          overflow: hidden;
-          background: #000;
-        }
-        .preview-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .change-img-btn {
-          position: absolute;
-          bottom: 12px;
-          right: 12px;
-          background: rgba(0, 0, 0, 0.7);
-          backdrop-filter: blur(4px);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 8px 12px;
-          font-size: 11px;
-          font-weight: 700;
-          border-radius: var(--radius-sm);
-          cursor: pointer;
-          transition: var(--transition);
-        }
-        .change-img-btn:hover {
-          background: #ffffff;
-          color: #000000;
-        }
-        .success-banner {
-          flex-direction: row;
-          align-items: center;
-          padding: 16px;
-          background: rgba(16, 185, 129, 0.08);
-          border: 1px solid rgba(16, 185, 129, 0.15);
-          gap: 16px;
-          text-align: left;
-        }
-        .banner-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: var(--success);
-          color: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          font-size: 18px;
-        }
-        .success-banner h3 {
-          font-size: 14px;
-          color: var(--success);
-        }
-        .error-banner {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: var(--error);
-          padding: 12px;
-          border-radius: var(--radius-md);
-          font-size: 13px;
-        }
-      `}</style>
+            {/* Biometric Guide Lines */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-48 h-64 border-2 border-dashed border-[#ffb59d]/40 rounded-full relative">
+                {/* Corner Brackets */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-[#ffb59d] rounded-tl-lg" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-[#ffb59d] rounded-tr-lg" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-[#ffb59d] rounded-bl-lg" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-[#ffb59d] rounded-br-lg" />
+                {/* Scan Line */}
+                {status === "registering" && <div className="scan-line absolute top-0 w-full" />}
+              </div>
+            </div>
+
+            {/* Focus Markers */}
+            <div className="absolute top-3 left-3 flex gap-1.5">
+              <div className="px-2 py-0.5 bg-[#ff570e]/20 backdrop-blur-md rounded border border-[#ff570e]/30">
+                <p className="text-[9px] font-bold text-[#ffb59d]">ISO 400</p>
+              </div>
+              <div className="px-2 py-0.5 bg-black/50 backdrop-blur-md rounded border border-white/10">
+                <p className="text-[9px] font-bold text-white">HD 60FPS</p>
+              </div>
+            </div>
+
+            {/* Capture Tips */}
+            <div className="absolute bottom-4 inset-x-0 flex justify-center px-3">
+              <div className="bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10">
+                <p className="text-[10px] font-medium text-white text-center">
+                  {status === "registering"
+                    ? "Hold still, scanning facial landmarks..."
+                    : status === "success"
+                    ? "Face profile securely registered"
+                    : "Position face within the frame"}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Step-by-Step Guide */}
+          <section className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col items-center gap-1 text-center p-2.5 rounded-xl bg-[#2a2a2c]/50 border border-[#353437]/40">
+              <span className="material-symbols-outlined text-[#ffb59d] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                light_mode
+              </span>
+              <p className="text-[9px] font-bold text-[#e5beb2]">Bright Light</p>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-center p-2.5 rounded-xl bg-[#2a2a2c]/50 border border-[#353437]/40">
+              <span className="material-symbols-outlined text-[#ffb59d] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                no_photography
+              </span>
+              <p className="text-[9px] font-bold text-[#e5beb2]">No Glasses</p>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-center p-2.5 rounded-xl bg-[#2a2a2c]/50 border border-[#353437]/40">
+              <span className="material-symbols-outlined text-[#ffb59d] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                person_pin
+              </span>
+              <p className="text-[9px] font-bold text-[#e5beb2]">Level View</p>
+            </div>
+          </section>
+        </div>
+
+        {/* Action Button */}
+        <div className="space-y-2 pt-2">
+          <button
+            onClick={handleRegister}
+            disabled={status !== "required"}
+            className={`w-full text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
+              status === "success"
+                ? "bg-[#00a572] text-white shadow-[0_4px_16px_rgba(0,165,114,0.4)]"
+                : "bg-[#ff570e] text-[#511500] shadow-[0_4px_16px_rgba(255,87,14,0.4)]"
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">
+              {status === "success" ? "check_circle" : "center_focus_strong"}
+            </span>
+            {status === "required" && "Register Biometrics"}
+            {status === "registering" && "Registering..."}
+            {status === "success" && "Success"}
+          </button>
+          <p className="text-center text-[9px] text-[#e5beb2]/60 font-medium">
+            Biometric data is encrypted and stored locally on this device.
+          </p>
+        </div>
+      </main>
+
+      <BottomNav />
     </div>
   );
 }

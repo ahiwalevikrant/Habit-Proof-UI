@@ -1,615 +1,229 @@
 "use client";
+import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api, DashboardResponse, HabitResponse } from "@/services/api";
-import Link from "next/link";
+const HABITS = [
+  { id: 1, name: "Morning 5K Run", selfieRequired: true, days: [true, true, false, false, false], streak: 5, completed: false },
+  { id: 2, name: "Cold Plunge - 3 Min", selfieRequired: false, days: [true, true, true, false, false], streak: 3, completed: true },
+];
 
-export default function Dashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardResponse | null>(null);
-  const [habits, setHabits] = useState<HabitResponse[]>([]);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+const PROOF_FEED = [
+  { id: 1, name: "Sarah K.", habit: "5 AM Deep Work", match: 94, imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAlnwlm3Z8qaobEPcJ8zGbgugL0ThLDjDRxFVFqPx4lSz_yW4oEtFBqJWpdHHDRq6LAOwyeMef6L7V9mLXKVg4XFurWIgA70--AQGz7Q_utFc_3QeJtAwyq_XF03LJm-nF3x2oSpFpwixM2KAzY_TjUUHb-uynK0VfQMss_MosnKNgWyoUReB23uoaYyBXkriNJdlis9JiEUYMLHyfcRK0wUWwQ_3pl__YtMLBjEnW-lPtBdF18T3S1aoE1kIFEcKtE5EvxRJGZXGo", avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAJo1eo5Ny_iQTq5g85ZXlbkp7U-cl1kuACcPREBXHfXfOgmfbP-c6g5smYIV8ZeJNy9f1VFomQaT8X_gBX-NwwaDYbPrrHx4GaaQeJ1QPg8H7S9slf-umA_cmGkpsM6G26zMAxYpIT5OxzKe6ox15mKKjAnedcRF5i3D28oPVTptVMd7Hl__nx317HX9QAyedOT7z_w7P-HSlJ92jXw3KiPw9WCPo95SGc9QklaSsmvTT-DPNw8hrBmEOBk9EqaOcK-J9yo0kBR0g" },
+  { id: 2, name: "Marcus V.", habit: "Mobility Flow", match: 98, imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuA31cMv8QnLJ--RlyoDAjofvyCtrXVe9tPwF_imI_M1O3JhaYikXVurpwiEhktf8yz8vOognPvnb5iUKoOvx0kdNCP3pG0gX550lnMMa1BnSz-ik7eNwADbhoIxWOznXgBMWBLCm2YXLDh40KtJX8UKr8ZY7vN_jT-Wl8BoaLjj3Q_xy3B-9fUOv3wy4gEBvqZklnZ37chqF56TTfl2-a-tPKC6W7TfEi3TZDT5-kzDbXVspMZeU1E5fbbltUcse-_fmmFF4pQpF40", avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuC2a_j9Wd0XG4nvxhMDS5xwxO8pXUzMkheMVi8JJmexq2bBrA07HE05KhxykoXHVq1VRUCOgbrhbgnnkOaGloYZ28faizlWluAISZ5imJAJhzsS81jY_Y-tqfK3squhRbZacYqBoxNZTs-zNwYm1UMB4_r6tj9E3h0txt8hWnCaAR6SM9BsKf7A0zfBwJeUywwDlci75v6uE8je77kZvCk9lUuIaWEG0JFI4EqysTjxGi_8JMBPdmIEFvMniFYgwcqLQIXQsF0mkfk" },
+];
 
-  useEffect(() => {
-    // Auth Guard check
-    if (!api.auth.isAuthenticated()) {
-      router.push("/auth");
-      return;
-    }
+export default function DashboardPage() {
+  const [habits, setHabits] = useState(HABITS);
 
-    setUser(api.auth.getCurrentUser());
+  const verified = habits.filter((h) => h.completed).length;
+  const total = habits.length;
+  const pct = Math.round((verified / total) * 100);
+  const circumference = 2 * Math.PI * 44;
+  const offset = circumference - (pct / 100) * circumference;
 
-    // Fetch dashboard stats & habits
-    const fetchData = async () => {
-      try {
-        const [statsData, habitsData] = await Promise.all([
-          api.dashboard.get(),
-          api.habits.list(),
-        ]);
-        setStats(statsData);
-        setHabits(habitsData);
-      } catch (err) {
-        console.error("Failed to load dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [router]);
-
-  const handleLogout = () => {
-    api.auth.logout();
-    router.push("/auth");
+  const verifyHabit = (id: number) => {
+    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, completed: true } : h)));
   };
-
-  if (loading) {
-    return (
-      <div className="screen-content flex-center" style={{ minHeight: "80vh" }}>
-        <div className="spinner"></div>
-        <style jsx>{`
-          .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Get color for habit category
-  const getCategoryColor = (cat: string) => {
-    switch (cat) {
-      case "FITNESS": return "#fc5200";
-      case "READING": return "#3b82f6";
-      case "COOKING": return "#10b981";
-      case "STUDY": return "#a855f7";
-      case "MEDITATION": return "#ec4899";
-      case "SKINCARE": return "#06b6d4";
-      default: return "#6b7280";
-    }
-  };
-
-  const todayStr = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="screen-content">
-      {/* Header section */}
-      <header className="dash-header">
-        <div>
-          <span className="welcome-tag">WELCOME BACK</span>
-          <h1 className="user-name">{user?.name || "Athlete"}</h1>
+    <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
+      {/* Top App Bar */}
+      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#ffb59d] flex-shrink-0">
+            <div className="w-full h-full flex items-center justify-center bg-[#2a2a2c]">
+              <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 18 }}>person</span>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-[#e5beb2] leading-tight">Welcome back</span>
+            <span className="text-[17px] font-bold text-white tracking-tight leading-tight">Vikrant!</span>
+          </div>
         </div>
-        <button onClick={handleLogout} className="logout-btn" title="Sign Out">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="p-1.5 hover:opacity-80 active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 24 }}>notifications</span>
+          </button>
+          <button className="p-1.5 hover:opacity-80 active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 24 }}>settings</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main Stats Card */}
-      {stats && (
-        <div className="card glass stats-card">
-          <div className="progress-ring-section">
-            <div className="progress-circle">
-              <svg className="svg-circle" viewBox="0 0 100 100">
-                <circle className="circle-bg" cx="50" cy="50" r="40" />
-                <circle 
-                  className="circle-progress" 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  style={{
-                    strokeDasharray: 251.2,
-                    strokeDashoffset: 251.2 - (251.2 * stats.overallCompletionRate) / 100
-                  }}
+      <main className="flex-1 px-4 pt-4 pb-28 space-y-5 w-full overflow-x-hidden">
+        {/* Bento Stats Grid */}
+        <section className="grid grid-cols-2 gap-3 w-full">
+          {/* Daily Goal — full width */}
+          <div className="col-span-2 glass-card p-5 rounded-2xl flex items-center justify-between overflow-hidden relative border border-[#353437]/60 bg-[#201f21]/80">
+            <div className="flex flex-col z-10 flex-1 min-w-0 pr-2">
+              <h2 className="text-lg font-bold text-white tracking-tight mb-0.5">Daily Goal</h2>
+              <p className="text-xs text-[#e5beb2] mb-3 truncate">{verified} of {total} habits verified</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-extrabold text-[#ffb59d] tracking-tight">{pct}</span>
+                <span className="text-lg font-bold text-[#ffb59d]">%</span>
+              </div>
+            </div>
+            {/* Circular Progress Ring */}
+            <div className="relative w-24 h-24 flex items-center justify-center z-10 flex-shrink-0">
+              <svg className="w-full h-full -rotate-90">
+                <circle cx="48" cy="48" r="44" fill="transparent" stroke="#353437" strokeWidth="7" />
+                <circle
+                  cx="48" cy="48" r="44" fill="transparent"
+                  stroke="#ff570e"
+                  strokeWidth="7"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                  strokeLinecap="round"
+                  style={{ filter: "drop-shadow(0 0 6px rgba(255,87,14,0.6))" }}
                 />
               </svg>
-              <div className="progress-text-container">
-                <span className="percent">{stats.overallCompletionRate}%</span>
-                <span className="label">Today</span>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="material-symbols-outlined icon-fill text-[#ffb59d]" style={{ fontSize: 26 }}>bolt</span>
               </div>
             </div>
-            <div className="progress-numbers">
-              <h3>Target Completed</h3>
-              <p>{stats.completedTodayCount} of {stats.totalHabits} habits checked-in</p>
-            </div>
+            {/* Ambient glow */}
+            <div
+              className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full pointer-events-none"
+              style={{ width: 140, height: 140, background: "rgba(255,181,157,0.08)", filter: "blur(50px)" }}
+            />
           </div>
 
-          <div className="stats-divider"></div>
-
-          <div className="streaks-row">
-            <div className="streak-box">
-              <div className="streak-icon-wrap streak-flame">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fc5200" stroke="#fc5200" strokeWidth="2">
-                  <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
-                </svg>
-              </div>
-              <div className="streak-info">
-                <span className="value">{stats.currentStreak} Days</span>
-                <span className="label">Active Streak</span>
-              </div>
+          {/* Streak Counter */}
+          <div className="glass-card p-3.5 rounded-2xl flex flex-col items-center justify-center text-center gap-0.5 border border-[#353437]/60 bg-[#201f21]/80">
+            <div className="streak-pulse">
+              <span className="material-symbols-outlined icon-fill text-[#ffb59d]" style={{ fontSize: 32 }}>local_fire_department</span>
             </div>
+            <span className="text-2xl font-extrabold text-white tracking-tight">5</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb59d]">Active Streak</span>
+          </div>
 
-            <div className="streak-box">
-              <div className="streak-icon-wrap" style={{ background: "rgba(255,255,255,0.05)" }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              </div>
-              <div className="streak-info">
-                <span className="value" style={{ color: "#ffffff" }}>{stats.longestStreak} Days</span>
-                <span className="label">Longest Streak</span>
-              </div>
+          {/* Longest Streak */}
+          <div className="glass-card p-3.5 rounded-2xl flex flex-col items-center justify-center text-center gap-0.5 border border-[#353437]/60 bg-[#201f21]/80">
+            <div className="opacity-80">
+              <span className="material-symbols-outlined text-[#ac897e]" style={{ fontSize: 32 }}>history</span>
             </div>
+            <span className="text-2xl font-extrabold text-white tracking-tight">12</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]">Longest Streak</span>
           </div>
-        </div>
-      )}
+        </section>
 
-      {/* Daily checklist */}
-      <section className="section-container">
-        <div className="flex-row-center" style={{ marginBottom: "12px" }}>
-          <h2>Today's Checklist</h2>
-          <Link href="/habits" className="see-all-link">Manage</Link>
-        </div>
-
-        {habits.length === 0 ? (
-          <div className="card flex-center empty-card">
-            <p>No habits added yet.</p>
-            <Link href="/habits" className="btn btn-secondary" style={{ marginTop: "12px", width: "auto" }}>
-              Add Your First Habit
-            </Link>
+        {/* Daily Habits */}
+        <section className="space-y-3 w-full">
+          <div className="flex justify-between items-center">
+            <h3 className="text-base font-bold text-white tracking-tight">Daily Habits</h3>
+            <button className="text-[11px] font-bold text-[#ffb59d] tracking-wider uppercase">VIEW ALL</button>
           </div>
-        ) : (
-          <div className="checklist-grid">
-            {habits.map((habit) => {
-              const isCheckedToday = habit.lastCheckInDate === todayStr;
 
-              return (
-                <div key={habit.id} className={`card checklist-item ${isCheckedToday ? "checked" : ""}`}>
-                  <div className="item-left">
-                    <span 
-                      className="category-dot" 
-                      style={{ background: getCategoryColor(habit.category) }}
-                    ></span>
-                    <div className="habit-info">
-                      <h3 className="habit-title">{habit.title}</h3>
-                      <div className="meta-row">
-                        {habit.requiresSelfie && (
-                          <span className="selfie-badge">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                              <circle cx="12" cy="13" r="4" />
-                            </svg>
-                            Selfie ID
-                          </span>
-                        )}
-                        <span className="streak-count-mini">
-                          🔥 {habit.currentStreak}d
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+          {habits.map((habit) => (
+            <div
+              key={habit.id}
+              className="glass-card p-4 rounded-2xl relative overflow-hidden group border border-[#353437]/60 bg-[#201f21]/80"
+              style={{
+                borderLeft: habit.completed ? "4px solid rgba(78,222,163,0.6)" : "4px solid #ff570e",
+                opacity: habit.completed ? 0.75 : 1,
+              }}
+            >
+              {/* Scan line on hover */}
+              {!habit.completed && <div className="scan-line hidden group-hover:block opacity-50" />}
 
-                  {isCheckedToday ? (
-                    <div className="checked-badge">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      Done
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => router.push(`/verify?habitId=${habit.id}`)}
-                      className="checkin-action-btn"
-                    >
-                      Verify
-                    </button>
-                  )}
+              <div className="flex justify-between items-center gap-2 mb-3">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{
+                      background: habit.completed ? "#4edea3" : "#ff570e",
+                      boxShadow: habit.completed ? "0 0 8px #4edea3" : "0 0 8px #ff570e",
+                    }}
+                  />
+                  <h4
+                    className="text-sm font-bold text-white truncate"
+                    style={{ textDecoration: habit.completed ? "line-through" : "none" }}
+                  >
+                    {habit.name}
+                  </h4>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Activity Feed */}
-      <section className="section-container" style={{ marginBottom: "40px" }}>
-        <h2>Proof Feed</h2>
-        {stats && stats.recentCheckIns.length === 0 ? (
-          <div className="card flex-center empty-card">
-            <p>Upload a photo check-in to see it in the feed.</p>
-          </div>
-        ) : (
-          <div className="feed-list">
-            {stats?.recentCheckIns.map((check) => {
-              const habit = habits.find((h) => h.id === check.habitId);
-              const isVerified = check.verificationStatus === "VERIFIED";
-
-              return (
-                <div key={check.id} className="card feed-card">
-                  <div className="feed-card-header">
-                    <div className="user-avatar-placeholder">
-                      {user?.name?.slice(0, 2).toUpperCase() || "AT"}
-                    </div>
-                    <div>
-                      <h3>{user?.name || "Athlete"}</h3>
-                      <p style={{ fontSize: "11px" }}>
-                        Checked in to <strong>{habit?.title || "Habit"}</strong> • {new Date(check.checkInDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
+                {habit.selfieRequired && !habit.completed && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ff570e]/15 border border-[#ff570e]/30 flex-shrink-0">
+                    <span className="material-symbols-outlined icon-fill text-[#ffb59d]" style={{ fontSize: 12 }}>photo_camera</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#ffb59d]">Selfie ID</span>
                   </div>
+                )}
+                {habit.completed && (
+                  <span className="text-[10px] font-bold tracking-wider text-[#4edea3] flex-shrink-0">VERIFIED</span>
+                )}
+              </div>
 
-                  {check.proofUrl && (
-                    <div className="feed-photo-container">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={check.proofUrl} alt="Check-In Proof" className="feed-photo" />
-                      
-                      <div className="feed-face-overlay glass">
-                        <span className={`badge ${isVerified ? "badge-success" : "badge-danger"}`}>
-                          {check.verificationStatus}
-                        </span>
-                        {check.faceMatchScore > 0 && (
-                          <span className="face-score">
-                            Match: {Math.round(check.faceMatchScore * 100)}%
-                          </span>
-                        )}
+              {!habit.completed && (
+                <div className="flex justify-between items-center gap-2 pt-1">
+                  {/* Day dots */}
+                  <div className="flex -space-x-1.5">
+                    {["M", "T", "W", "T", "F"].map((d, i) => (
+                      <div
+                        key={i}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
+                        style={{
+                          background: habit.days[i] ? "#ffb59d" : "#353437",
+                          color: habit.days[i] ? "#5d1900" : "#e5e1e4",
+                          border: "2px solid #131315",
+                        }}
+                      >
+                        {d}
                       </div>
-                    </div>
-                  )}
-
-                  {check.note && (
-                    <p className="feed-note">"{check.note}"</p>
-                  )}
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => verifyHabit(habit.id)}
+                    className="px-4 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase transition-all active:scale-95 bg-[#ffb59d] text-[#5d1900] shadow-[0_2px_10px_rgba(255,181,157,0.3)]"
+                  >
+                    VERIFY
+                  </button>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          ))}
+        </section>
+
+        {/* Recent Verifications Proof Feed */}
+        <section className="space-y-3 w-full">
+          <h3 className="text-base font-bold text-white tracking-tight">Recent Verifications</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x no-scrollbar">
+            {PROOF_FEED.map((item) => (
+              <div
+                key={item.id}
+                className="w-[240px] snap-start glass-card rounded-2xl overflow-hidden flex flex-col flex-shrink-0 border border-[#353437]/60 bg-[#201f21]/80"
+              >
+                <div className="relative h-36 w-full">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.habit}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Verified badge */}
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-[#00a572]/90 text-white">
+                    VERIFIED
+                  </div>
+                  {/* User avatar */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-[#131315]/70 backdrop-blur-md border border-white/10">
+                    <div className="w-5 h-5 rounded-full overflow-hidden border border-[#ffb59d]">
+                      <img src={item.avatarUrl} alt={item.name} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[10px] font-medium text-white">{item.name}</span>
+                  </div>
+                </div>
+                <div className="p-3 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-white truncate max-w-[140px]">{item.habit}</span>
+                  <div className="flex items-center gap-1 text-[#4edea3]">
+                    <span className="text-[10px] font-bold">{item.match}%</span>
+                    <span className="material-symbols-outlined text-[14px]">fingerprint</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </section>
+        </section>
+      </main>
 
-      <style jsx>{`
-        .dash-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 8px 0;
-        }
-
-        .welcome-tag {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 1px;
-          color: var(--primary);
-        }
-
-        .user-name {
-          font-size: 26px;
-        }
-
-        .logout-btn {
-          width: 44px;
-          height: 44px;
-          border-radius: var(--radius-md);
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          color: var(--text-muted);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .logout-btn:hover {
-          color: var(--error);
-          background: rgba(239, 68, 68, 0.05);
-          border-color: rgba(239, 68, 68, 0.2);
-        }
-
-        /* Stats Card Styles */
-        .stats-card {
-          padding: 22px;
-        }
-
-        .progress-ring-section {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-        }
-
-        .progress-circle {
-          width: 80px;
-          height: 80px;
-          position: relative;
-        }
-
-        .svg-circle {
-          transform: rotate(-90deg);
-          width: 100%;
-          height: 100%;
-        }
-
-        .circle-bg {
-          fill: none;
-          stroke: var(--border);
-          stroke-width: 8px;
-        }
-
-        .circle-progress {
-          fill: none;
-          stroke: var(--primary);
-          stroke-width: 8px;
-          stroke-linecap: round;
-          transition: stroke-dashoffset 0.8s ease-in-out;
-        }
-
-        .progress-text-container {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .progress-text-container .percent {
-          font-size: 16px;
-          font-weight: 700;
-          color: #ffffff;
-        }
-
-        .progress-text-container .label {
-          font-size: 8px;
-          text-transform: uppercase;
-          color: var(--text-muted);
-          letter-spacing: 0.5px;
-        }
-
-        .progress-numbers h3 {
-          font-size: 16px;
-          color: #ffffff;
-        }
-
-        .stats-divider {
-          height: 1px;
-          background: var(--border);
-          width: 100%;
-        }
-
-        .streaks-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 16px;
-        }
-
-        .streak-box {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex: 1;
-        }
-
-        .streak-icon-wrap {
-          width: 42px;
-          height: 42px;
-          border-radius: var(--radius-sm);
-          background: rgba(252, 82, 0, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .streak-info {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .streak-info .value {
-          font-size: 15px;
-          font-weight: 700;
-          color: var(--primary);
-        }
-
-        .streak-info .label {
-          font-size: 10px;
-          color: var(--text-muted);
-        }
-
-        /* Checklist Styles */
-        .section-container {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .see-all-link {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--primary);
-        }
-
-        .checklist-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .checklist-item {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 16px;
-          gap: 12px;
-        }
-
-        .checklist-item.checked {
-          background: rgba(28, 28, 31, 0.4);
-          opacity: 0.8;
-          border-color: rgba(255, 255, 255, 0.02);
-        }
-
-        .item-left {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .habit-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .habit-title {
-          font-size: 15px;
-          color: #ffffff;
-        }
-
-        .meta-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .selfie-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 9px;
-          font-weight: 600;
-          background: rgba(252, 82, 0, 0.08);
-          color: var(--primary);
-          padding: 2px 6px;
-          border-radius: 4px;
-          border: 1px solid rgba(252, 82, 0, 0.15);
-        }
-
-        .streak-count-mini {
-          font-size: 10px;
-          color: var(--text-muted);
-          font-weight: 600;
-        }
-
-        .checkin-action-btn {
-          background: var(--primary);
-          color: #ffffff;
-          border: none;
-          padding: 8px 14px;
-          border-radius: var(--radius-sm);
-          font-size: 12px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .checkin-action-btn:active {
-          transform: scale(0.95);
-        }
-
-        .checked-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--success);
-          background: var(--success-glow);
-          padding: 8px 14px;
-          border-radius: var(--radius-sm);
-          border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .empty-card {
-          padding: 30px;
-          text-align: center;
-          border-style: dashed;
-        }
-
-        /* Feed Styles */
-        .feed-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .feed-card {
-          padding: 16px;
-          gap: 12px;
-        }
-
-        .feed-card-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .user-avatar-placeholder {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: var(--bg-input);
-          border: 1px solid var(--border);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          font-weight: 700;
-          color: var(--primary);
-        }
-
-        .feed-photo-container {
-          position: relative;
-          width: 100%;
-          border-radius: var(--radius-md);
-          overflow: hidden;
-          background: #000000;
-          aspect-ratio: 4/3;
-        }
-
-        .feed-photo {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .feed-face-overlay {
-          position: absolute;
-          bottom: 12px;
-          left: 12px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 12px;
-          border-radius: var(--radius-sm);
-        }
-
-        .face-score {
-          font-size: 11px;
-          font-weight: 600;
-          color: #ffffff;
-        }
-
-        .feed-note {
-          font-size: 13px;
-          font-style: italic;
-          color: #ffffff;
-          border-left: 3px solid var(--border);
-          padding-left: 8px;
-          margin-top: 4px;
-        }
-      `}</style>
+      <BottomNav />
     </div>
   );
 }
