@@ -1,28 +1,82 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import { api, HabitResponse, CheckInResponse } from "@/services/api";
 
-const HABITS = [
+const FALLBACK_HABITS = [
   { id: 1, name: "Morning 5K Run", selfieRequired: true, days: [true, true, false, false, false], streak: 5, completed: false },
   { id: 2, name: "Cold Plunge - 3 Min", selfieRequired: false, days: [true, true, true, false, false], streak: 3, completed: true },
 ];
 
-const PROOF_FEED = [
+const FALLBACK_PROOF_FEED = [
   { id: 1, name: "Sarah K.", habit: "5 AM Deep Work", match: 94, imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAlnwlm3Z8qaobEPcJ8zGbgugL0ThLDjDRxFVFqPx4lSz_yW4oEtFBqJWpdHHDRq6LAOwyeMef6L7V9mLXKVg4XFurWIgA70--AQGz7Q_utFc_3QeJtAwyq_XF03LJm-nF3x2oSpFpwixM2KAzY_TjUUHb-uynK0VfQMss_MosnKNgWyoUReB23uoaYyBXkriNJdlis9JiEUYMLHyfcRK0wUWwQ_3pl__YtMLBjEnW-lPtBdF18T3S1aoE1kIFEcKtE5EvxRJGZXGo", avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAJo1eo5Ny_iQTq5g85ZXlbkp7U-cl1kuACcPREBXHfXfOgmfbP-c6g5smYIV8ZeJNy9f1VFomQaT8X_gBX-NwwaDYbPrrHx4GaaQeJ1QPg8H7S9slf-umA_cmGkpsM6G26zMAxYpIT5OxzKe6ox15mKKjAnedcRF5i3D28oPVTptVMd7Hl__nx317HX9QAyedOT7z_w7P-HSlJ92jXw3KiPw9WCPo95SGc9QklaSsmvTT-DPNw8hrBmEOBk9EqaOcK-J9yo0kBR0g" },
   { id: 2, name: "Marcus V.", habit: "Mobility Flow", match: 98, imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuA31cMv8QnLJ--RlyoDAjofvyCtrXVe9tPwF_imI_M1O3JhaYikXVurpwiEhktf8yz8vOognPvnb5iUKoOvx0kdNCP3pG0gX550lnMMa1BnSz-ik7eNwADbhoIxWOznXgBMWBLCm2YXLDh40KtJX8UKr8ZY7vN_jT-Wl8BoaLjj3Q_xy3B-9fUOv3wy4gEBvqZklnZ37chqF56TTfl2-a-tPKC6W7TfEi3TZDT5-kzDbXVspMZeU1E5fbbltUcse-_fmmFF4pQpF40", avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuC2a_j9Wd0XG4nvxhMDS5xwxO8pXUzMkheMVi8JJmexq2bBrA07HE05KhxykoXHVq1VRUCOgbrhbgnnkOaGloYZ28faizlWluAISZ5imJAJhzsS81jY_Y-tqfK3squhRbZacYqBoxNZTs-zNwYm1UMB4_r6tj9E3h0txt8hWnCaAR6SM9BsKf7A0zfBwJeUywwDlci75v6uE8je77kZvCk9lUuIaWEG0JFI4EqysTjxGi_8JMBPdmIEFvMniFYgwcqLQIXQsF0mkfk" },
 ];
 
 export default function DashboardPage() {
-  const [habits, setHabits] = useState(HABITS);
+  const [habits, setHabits] = useState(FALLBACK_HABITS);
+  const [stats, setStats] = useState({
+    pct: 50,
+    activeStreak: 5,
+    longestStreak: 12,
+    verifiedCount: 1,
+    totalCount: 2,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const verified = habits.filter((h) => h.completed).length;
-  const total = habits.length;
-  const pct = Math.round((verified / total) * 100);
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        const [dashData, habitsData] = await Promise.all([
+          api.dashboard.get(),
+          api.habits.list(),
+        ]);
+        if (habitsData && habitsData.length > 0) {
+          setHabits(
+            habitsData.map((h) => ({
+              id: h.id,
+              name: h.title,
+              selfieRequired: h.requiresSelfie,
+              days: [true, true, false, false, false],
+              streak: h.currentStreak,
+              completed: h.lastCheckInDate === new Date().toISOString().split("T")[0],
+            }))
+          );
+        }
+        if (dashData) {
+          setStats({
+            pct: dashData.overallCompletionRate || 50,
+            activeStreak: dashData.currentStreak || 5,
+            longestStreak: dashData.longestStreak || 12,
+            verifiedCount: dashData.completedTodayCount || 1,
+            totalCount: dashData.totalHabits || 2,
+          });
+        }
+      } catch (err) {
+        console.warn("Using mock fallback data for dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboardData();
+  }, []);
+
   const circumference = 2 * Math.PI * 44;
-  const offset = circumference - (pct / 100) * circumference;
+  const offset = circumference - (stats.pct / 100) * circumference;
 
-  const verifyHabit = (id: number) => {
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, completed: true } : h)));
+  const verifyHabit = async (id: number) => {
+    try {
+      await api.checkins.create(id, null, "Verified via Dashboard");
+      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, completed: true } : h)));
+      setStats((prev) => ({
+        ...prev,
+        verifiedCount: prev.verifiedCount + 1,
+        pct: Math.round(((prev.verifiedCount + 1) / prev.totalCount) * 100),
+      }));
+    } catch (err) {
+      // Local optimistic update
+      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, completed: true } : h)));
+    }
   };
 
   return (
@@ -57,9 +111,9 @@ export default function DashboardPage() {
           <div className="col-span-2 glass-card p-5 rounded-2xl flex items-center justify-between overflow-hidden relative border border-[#353437]/60 bg-[#201f21]/80">
             <div className="flex flex-col z-10 flex-1 min-w-0 pr-2">
               <h2 className="text-lg font-bold text-white tracking-tight mb-0.5">Daily Goal</h2>
-              <p className="text-xs text-[#e5beb2] mb-3 truncate">{verified} of {total} habits verified</p>
+              <p className="text-xs text-[#e5beb2] mb-3 truncate">{stats.verifiedCount} of {stats.totalCount} habits verified</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-[#ffb59d] tracking-tight">{pct}</span>
+                <span className="text-4xl font-extrabold text-[#ffb59d] tracking-tight">{stats.pct}</span>
                 <span className="text-lg font-bold text-[#ffb59d]">%</span>
               </div>
             </div>
@@ -93,7 +147,7 @@ export default function DashboardPage() {
             <div className="streak-pulse">
               <span className="material-symbols-outlined icon-fill text-[#ffb59d]" style={{ fontSize: 32 }}>local_fire_department</span>
             </div>
-            <span className="text-2xl font-extrabold text-white tracking-tight">5</span>
+            <span className="text-2xl font-extrabold text-white tracking-tight">{stats.activeStreak}</span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb59d]">Active Streak</span>
           </div>
 
@@ -102,7 +156,7 @@ export default function DashboardPage() {
             <div className="opacity-80">
               <span className="material-symbols-outlined text-[#ac897e]" style={{ fontSize: 32 }}>history</span>
             </div>
-            <span className="text-2xl font-extrabold text-white tracking-tight">12</span>
+            <span className="text-2xl font-extrabold text-white tracking-tight">{stats.longestStreak}</span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]">Longest Streak</span>
           </div>
         </section>
@@ -187,7 +241,7 @@ export default function DashboardPage() {
         <section className="space-y-3 w-full">
           <h3 className="text-base font-bold text-white tracking-tight">Recent Verifications</h3>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x no-scrollbar">
-            {PROOF_FEED.map((item) => (
+            {FALLBACK_PROOF_FEED.map((item) => (
               <div
                 key={item.id}
                 className="w-[240px] snap-start glass-card rounded-2xl overflow-hidden flex flex-col flex-shrink-0 border border-[#353437]/60 bg-[#201f21]/80"

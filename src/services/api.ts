@@ -281,6 +281,27 @@ export const api = {
       return res.data;
     },
 
+    googleAuth: async (idToken?: string): Promise<AuthResponse> => {
+      if (IS_MOCK_ACTIVE) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        const mockRes = {
+          token: "mock-google-jwt-token-xyz-12345",
+          email: "alex.google@habitproof.com",
+          name: "Alex Rivers (Google)",
+        };
+        setStoredToken(mockRes.token);
+        setStoredUser({ email: mockRes.email, name: mockRes.name });
+        return mockRes;
+      }
+      const res = await request<AuthResponse>("/api/v1/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ idToken }),
+      });
+      setStoredToken(res.data.token);
+      setStoredUser({ email: res.data.email, name: res.data.name });
+      return res.data;
+    },
+
     logout: () => {
       clearStoredToken();
     },
@@ -392,8 +413,8 @@ export const api = {
   checkins: {
     create: async (
       habitId: number,
-      file: File | null,
-      note: string
+      file: File | string | null = null,
+      note: string = ""
     ): Promise<CheckInResponse> => {
       if (IS_MOCK_ACTIVE) {
         await new Promise((resolve) => setTimeout(resolve, 2500)); // Simulate face scan verification delay
@@ -403,7 +424,7 @@ export const api = {
           habitId,
           checkInDate: new Date().toISOString(),
           note,
-          proofUrl: file ? URL.createObjectURL(file) : null,
+          proofUrl: typeof file === "string" ? file : file ? URL.createObjectURL(file) : null,
           verificationStatus: isFaceSuccess ? "VERIFIED" : "FAILED",
           qualityStatus: file ? "PASSED" : "UNCHECKED",
           faceMatchScore: file ? parseFloat((0.85 + Math.random() * 0.14).toFixed(2)) : 0.0,
@@ -428,7 +449,7 @@ export const api = {
       }
 
       const formData = new FormData();
-      if (file) formData.append("file", file);
+      if (file && typeof file !== "string") formData.append("file", file);
       if (note) formData.append("note", note);
 
       const res = await request<CheckInResponse>(`/api/v1/habits/${habitId}/check-ins`, {
@@ -449,7 +470,7 @@ export const api = {
   },
 
   face: {
-    enroll: async (file: File): Promise<FaceStatusResponse> => {
+    enroll: async (file?: File | string): Promise<FaceStatusResponse> => {
       if (IS_MOCK_ACTIVE) {
         await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate biometric registration delay
         mockFaceStatus = {
@@ -461,7 +482,9 @@ export const api = {
       }
 
       const formData = new FormData();
-      formData.append("file", file);
+      if (file && typeof file !== "string") {
+        formData.append("file", file);
+      }
 
       const res = await request<FaceStatusResponse>("/api/v1/face/enroll", {
         method: "POST",

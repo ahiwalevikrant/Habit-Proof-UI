@@ -22,9 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0a0a0c] text-[#e5e1e4] antialiased min-h-screen flex justify-center items-start">
-        {/* Mobile Viewport Container - Centered on Desktop */}
-        <div className="w-full max-w-[440px] min-h-screen bg-[#131315] shadow-[0_0_60px_rgba(0,0,0,0.8),0_0_0_1px_rgba(53,52,55,0.4)] relative flex flex-col overflow-x-hidden">
+      <body className="bg-[#0a0a0c] text-[#e5e1e4] antialiased min-h-screen flex justify-center items-start selection:bg-[#ff570e]/30 selection:text-[#ffb59d]">
+        {/* Responsive Mobile Container: Native edge-to-edge on phones, sleek centered app frame on desktop */}
+        <div className="w-full md:max-w-[440px] min-h-screen md:min-h-[calc(100vh-2rem)] md:my-4 md:rounded-3xl bg-[#131315] md:shadow-[0_0_60px_rgba(0,0,0,0.9),0_0_0_1px_rgba(53,52,55,0.4)] relative flex flex-col overflow-x-hidden border-0 md:border md:border-[#353437]/60">
           {children}
         </div>
       </body>

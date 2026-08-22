@@ -1,43 +1,99 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import { api, HabitCategory } from "@/services/api";
 
-const INITIAL_HABITS = [
-  { id: 1, name: "6AM HIIT Session", description: "", category: "fitness", selfieRequired: false, streak: 14, status: "Active", color: "#ff570e", glow: "#ff570e" },
-  { id: 2, name: "Philosophy Reading", description: "20 pages daily", category: "reading", selfieRequired: true, streak: 3, status: "Active", color: "#3b82f6", glow: "#3b82f6" },
-  { id: 3, name: "Deep Breath Protocol", description: "", category: "mindfulness", selfieRequired: false, streak: 0, status: "Rest Day", progress: 80, color: "#a855f7", glow: "#a855f7" },
+const FALLBACK_HABITS = [
+  { id: 1, name: "6AM HIIT Session", description: "", category: "FITNESS", selfieRequired: false, streak: 14, status: "Active", color: "#ff570e", glow: "#ff570e" },
+  { id: 2, name: "Philosophy Reading", description: "20 pages daily", category: "READING", selfieRequired: true, streak: 3, status: "Active", color: "#3b82f6", glow: "#3b82f6" },
+  { id: 3, name: "Deep Breath Protocol", description: "", category: "MEDITATION", selfieRequired: false, streak: 0, status: "Rest Day", progress: 80, color: "#a855f7", glow: "#a855f7" },
 ];
 
 const CATEGORIES = [
-  { key: "fitness", icon: "fitness_center", color: "#ff570e", bg: "rgba(255,87,14,0.2)", border: "rgba(255,87,14,0.4)" },
-  { key: "reading", icon: "menu_book", color: "#3b82f6", bg: "rgba(59,130,246,0.2)", border: "rgba(59,130,246,0.4)" },
-  { key: "mindfulness", icon: "self_improvement", color: "#a855f7", bg: "rgba(168,85,247,0.2)", border: "rgba(168,85,247,0.4)" },
+  { key: "FITNESS", icon: "fitness_center", color: "#ff570e", bg: "rgba(255,87,14,0.2)" },
+  { key: "READING", icon: "menu_book", color: "#3b82f6", bg: "rgba(59,130,246,0.2)" },
+  { key: "MEDITATION", icon: "self_improvement", color: "#a855f7", bg: "rgba(168,85,247,0.2)" },
 ];
 
 export default function HabitsPage() {
-  const [habits, setHabits] = useState(INITIAL_HABITS);
+  const [habits, setHabits] = useState(FALLBACK_HABITS);
   const [showModal, setShowModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("fitness");
+  const [selectedCategory, setSelectedCategory] = useState<HabitCategory>("FITNESS");
   const [newHabit, setNewHabit] = useState({ name: "", description: "", selfieRequired: true });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const saveHabit = () => {
+  useEffect(() => {
+    async function loadHabits() {
+      try {
+        const data = await api.habits.list();
+        if (data && data.length > 0) {
+          setHabits(
+            data.map((h) => ({
+              id: h.id,
+              name: h.title,
+              description: h.description,
+              category: h.category,
+              selfieRequired: h.requiresSelfie,
+              streak: h.currentStreak,
+              status: h.status === "ACTIVE" ? "Active" : "Archived",
+              color: h.category === "READING" ? "#3b82f6" : h.category === "MEDITATION" ? "#a855f7" : "#ff570e",
+              glow: h.category === "READING" ? "#3b82f6" : h.category === "MEDITATION" ? "#a855f7" : "#ff570e",
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Using fallback habits list:", err);
+      }
+    }
+    loadHabits();
+  }, []);
+
+  const saveHabit = async () => {
     if (!newHabit.name.trim()) return;
-    setHabits((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: newHabit.name,
-        description: newHabit.description,
-        category: selectedCategory,
-        selfieRequired: newHabit.selfieRequired,
-        streak: 0,
-        status: "Active",
-        color: "#ff570e",
-        glow: "#ff570e",
-      },
-    ]);
-    setShowModal(false);
-    setNewHabit({ name: "", description: "", selfieRequired: true });
+    setIsSaving(true);
+    try {
+      const created = await api.habits.create(
+        newHabit.name,
+        newHabit.description,
+        selectedCategory,
+        newHabit.selfieRequired,
+        new Date().toISOString().split("T")[0]
+      );
+      setHabits((prev) => [
+        ...prev,
+        {
+          id: created.id,
+          name: created.title,
+          description: created.description,
+          category: created.category,
+          selfieRequired: created.requiresSelfie,
+          streak: 0,
+          status: "Active",
+          color: created.category === "READING" ? "#3b82f6" : created.category === "MEDITATION" ? "#a855f7" : "#ff570e",
+          glow: created.category === "READING" ? "#3b82f6" : created.category === "MEDITATION" ? "#a855f7" : "#ff570e",
+        },
+      ]);
+    } catch (err) {
+      // Local optimistic fallback
+      setHabits((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          name: newHabit.name,
+          description: newHabit.description,
+          category: selectedCategory,
+          selfieRequired: newHabit.selfieRequired,
+          streak: 0,
+          status: "Active",
+          color: "#ff570e",
+          glow: "#ff570e",
+        },
+      ]);
+    } finally {
+      setIsSaving(false);
+      setShowModal(false);
+      setNewHabit({ name: "", description: "", selfieRequired: true });
+    }
   };
 
   return (
@@ -188,7 +244,7 @@ export default function HabitsPage() {
                     <button
                       key={cat.key}
                       type="button"
-                      onClick={() => setSelectedCategory(cat.key)}
+                      onClick={() => setSelectedCategory(cat.key as HabitCategory)}
                       className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
                       style={{
                         background: selectedCategory === cat.key ? cat.bg : "transparent",
@@ -232,9 +288,17 @@ export default function HabitsPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl text-sm font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)]"
+                disabled={isSaving}
+                className="w-full py-3 rounded-xl text-sm font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)] flex items-center justify-center gap-2"
               >
-                Save Habit
+                {isSaving ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                    Saving...
+                  </>
+                ) : (
+                  "Save Habit"
+                )}
               </button>
             </form>
           </div>
