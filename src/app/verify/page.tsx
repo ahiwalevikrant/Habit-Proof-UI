@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 import { api } from "@/services/api";
 
 const HABIT_TASKS = [
@@ -22,12 +23,42 @@ export default function VerifyPage() {
   const [selectedTask, setSelectedTask] = useState("run");
   const [statusIndex, setStatusIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [hasWebcam, setHasWebcam] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setStatusIndex((prev) => (prev + 1) % STATUS_TEXTS.length);
     }, 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Request browser camera stream
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    async function initCamera() {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setHasWebcam(true);
+          }
+        }
+      } catch (err) {
+        console.log("Webcam info:", err);
+        setHasWebcam(false);
+      }
+    }
+    initCamera();
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, []);
 
   const handleSubmit = async () => {
@@ -56,7 +87,7 @@ export default function VerifyPage() {
           </div>
           <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">Habit-proof</h1>
         </div>
-        <button className="text-[#ffb59d] hover:opacity-80">
+        <button onClick={() => setShowSettings(true)} className="text-[#ffb59d] hover:opacity-80 p-1">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
       </header>
@@ -96,23 +127,32 @@ export default function VerifyPage() {
         {/* Camera Viewfinder Section */}
         <div className="relative flex-1 flex items-center justify-center min-h-[300px]">
           <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#353437] bg-black shadow-2xl">
-            {/* Background Image (Selfie Feed) */}
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnSQ2pQCU0sEkbk6GJB7bLF9HOsPjoSVwAjoTpzDDZ_WobBQvuldPwv4U6phkBeHz2RLqbULuYaqs9J2a-3Y0XHBgLNjxDfiLacErRXDimRlYjUtMj_pftzWer6m71wphGhib-SLx4GTINCR6q88v6ySxJvrHjdGmuJPlLKM2frDx7hHKMSISoXOFk-BMkpyjE5kYRVF5JmhtTqZRZEzE0w0jmjTaqmmgq3O4KUMEyA5_YcwmzAGsy0hOjC3ueNfeYcC1UsQdY7fA')",
-              }}
+            {/* Live Camera Stream or Simulated Image */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`absolute inset-0 w-full h-full object-cover ${hasWebcam ? "block" : "hidden"}`}
             />
+            {!hasWebcam && (
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnSQ2pQCU0sEkbk6GJB7bLF9HOsPjoSVwAjoTpzDDZ_WobBQvuldPwv4U6phkBeHz2RLqbULuYaqs9J2a-3Y0XHBgLNjxDfiLacErRXDimRlYjUtMj_pftzWer6m71wphGhib-SLx4GTINCR6q88v6ySxJvrHjdGmuJPlLKM2frDx7hHKMSISoXOFk-BMkpyjE5kYRVF5JmhtTqZRZEzE0w0jmjTaqmmgq3O4KUMEyA5_YcwmzAGsy0hOjC3ueNfeYcC1UsQdY7fA')",
+                }}
+              />
+            )}
 
             {/* Overlay Interface */}
-            <div className="absolute inset-0 flex flex-col justify-between p-3.5 pointer-events-none">
+            <div className="absolute inset-0 flex flex-col justify-between p-3.5 pointer-events-none z-10">
               {/* Top Data */}
               <div className="flex justify-between items-start">
                 <div className="bg-black/50 backdrop-blur-md rounded-lg px-2.5 py-1 border border-white/10 flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-[#4edea3] animate-pulse" />
                   <span className="text-[9px] font-bold text-[#4edea3] uppercase tracking-widest">
-                    Live Feed
+                    {hasWebcam ? "Live Camera Active" : "Live Feed Simulator"}
                   </span>
                 </div>
                 <div className="bg-black/50 backdrop-blur-md rounded-lg px-2.5 py-1 border border-white/10 text-right">
@@ -170,6 +210,7 @@ export default function VerifyPage() {
         </div>
       </main>
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );

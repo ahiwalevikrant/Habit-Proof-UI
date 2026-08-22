@@ -1,10 +1,41 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 import { api } from "@/services/api";
 
 export default function FaceEnrollPage() {
   const [status, setStatus] = useState<"required" | "registering" | "success">("required");
+  const [showSettings, setShowSettings] = useState(false);
+  const [hasWebcam, setHasWebcam] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Request browser camera stream
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    async function initCamera() {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setHasWebcam(true);
+          }
+        }
+      } catch (err) {
+        console.log("Webcam info:", err);
+        setHasWebcam(false);
+      }
+    }
+    initCamera();
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const handleRegister = async () => {
     setStatus("registering");
@@ -28,7 +59,7 @@ export default function FaceEnrollPage() {
             Habit-proof
           </h1>
         </div>
-        <button className="text-[#e5beb2] hover:opacity-80">
+        <button onClick={() => setShowSettings(true)} className="text-[#e5beb2] hover:opacity-80 p-1">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
       </header>
@@ -47,12 +78,12 @@ export default function FaceEnrollPage() {
               </div>
               <div>
                 <p className="text-[9px] font-bold text-[#ffb95f] tracking-wider uppercase">
-                  Status
+                  Biometric Profile Status
                 </p>
                 <h2 className="text-xs font-bold text-white">
                   {status === "required" && "Setup Required"}
-                  {status === "registering" && "Enrolling..."}
-                  {status === "success" && "Enrolled"}
+                  {status === "registering" && "Enrolling Face ID..."}
+                  {status === "success" && "Enrolled & Active"}
                 </h2>
               </div>
             </div>
@@ -61,19 +92,29 @@ export default function FaceEnrollPage() {
 
           {/* Camera Enrollment Frame */}
           <section className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-[#353437] bg-black shadow-2xl">
-            {/* Simulated Camera Feed Image */}
-            <div
-              className="absolute inset-0 w-full h-full bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCEBHfHEiK1peIIMnqiBD8ODeyKFyp_-RoR9p_RyxIxuVw4K0a-SsjITSahMEI1AW6GkXYBs5TFleDYwrL3WoCrHJOeLVk9vYa05yjbPSrmLJef0OnOsE_XQaPQRxOi8NnKNdmlRE1v_kCc5w9o-5hZACOm4XaDgbIXzcv4RFHAlYQS8SjF3xraj1KCac9wYl17pwCx_io1sWSdlihFa4orSjyGw4V5W75pL7aKdhk6HAS-BYRwRCPx2NqbDmP8muaxMbrZCYJ7jGk')",
-              }}
+            {/* Live Camera Stream or Simulated Image */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`absolute inset-0 w-full h-full object-cover ${hasWebcam ? "block" : "hidden"}`}
             />
+            {!hasWebcam && (
+              <div
+                className="absolute inset-0 w-full h-full bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCEBHfHEiK1peIIMnqiBD8ODeyKFyp_-RoR9p_RyxIxuVw4K0a-SsjITSahMEI1AW6GkXYBs5TFleDYwrL3WoCrHJOeLVk9vYa05yjbPSrmLJef0OnOsE_XQaPQRxOi8NnKNdmlRE1v_kCc5w9o-5hZACOm4XaDgbIXzcv4RFHAlYQS8SjF3xraj1KCac9wYl17pwCx_io1sWSdlihFa4orSjyGw4V5W75pL7aKdhk6HAS-BYRwRCPx2NqbDmP8muaxMbrZCYJ7jGk')",
+                }}
+              />
+            )}
+
             {/* Camera Overlay Gradient */}
-            <div className="absolute inset-0 camera-overlay" />
+            <div className="absolute inset-0 camera-overlay pointer-events-none" />
 
             {/* Biometric Guide Lines */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <div className="w-48 h-64 border-2 border-dashed border-[#ffb59d]/40 rounded-full relative">
                 {/* Corner Brackets */}
                 <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-[#ffb59d] rounded-tl-lg" />
@@ -86,9 +127,9 @@ export default function FaceEnrollPage() {
             </div>
 
             {/* Focus Markers */}
-            <div className="absolute top-3 left-3 flex gap-1.5">
+            <div className="absolute top-3 left-3 flex gap-1.5 z-10">
               <div className="px-2 py-0.5 bg-[#ff570e]/20 backdrop-blur-md rounded border border-[#ff570e]/30">
-                <p className="text-[9px] font-bold text-[#ffb59d]">ISO 400</p>
+                <p className="text-[9px] font-bold text-[#ffb59d]">{hasWebcam ? "WEBCAM LIVE" : "ISO 400"}</p>
               </div>
               <div className="px-2 py-0.5 bg-black/50 backdrop-blur-md rounded border border-white/10">
                 <p className="text-[9px] font-bold text-white">HD 60FPS</p>
@@ -96,7 +137,7 @@ export default function FaceEnrollPage() {
             </div>
 
             {/* Capture Tips */}
-            <div className="absolute bottom-4 inset-x-0 flex justify-center px-3">
+            <div className="absolute bottom-4 inset-x-0 flex justify-center px-3 z-10">
               <div className="bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10">
                 <p className="text-[10px] font-medium text-white text-center">
                   {status === "registering"
@@ -156,6 +197,7 @@ export default function FaceEnrollPage() {
         </div>
       </main>
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );

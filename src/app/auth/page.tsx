@@ -14,15 +14,21 @@ export default function AuthPage() {
   const [done, setDone] = useState(false);
   const router = useRouter();
 
+  const handleFillDemo = () => {
+    setName("Vikrant Ahiwale");
+    setEmail("athlete@habitproof.com");
+    setPassword("demo123");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
     try {
       if (tab === "login") {
-        await api.auth.login(email || "athlete@habitproof.com", password || "pass123");
+        await api.auth.login(email || "athlete@habitproof.com", password || "demo123");
       } else {
-        await api.auth.signup(name || "Athlete", email || "athlete@habitproof.com", password || "pass123");
+        await api.auth.signup(name || "Vikrant Ahiwale", email || "athlete@habitproof.com", password || "demo123");
       }
       setDone(true);
       setTimeout(() => router.push("/"), 600);
@@ -54,7 +60,7 @@ export default function AuthPage() {
       <div className="glow-accent" style={{ bottom: -100, right: -100 }} />
 
       {/* Logo */}
-      <header className="mb-6 flex flex-col items-center animate-fade-in z-10 text-center">
+      <header className="mb-5 flex flex-col items-center animate-fade-in z-10 text-center">
         <div className="mb-3 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#ff570e] shadow-[0_0_20px_rgba(255,87,14,0.5)]">
           <span className="material-symbols-outlined icon-fill text-white" style={{ fontSize: 28 }}>bolt</span>
         </div>
@@ -135,13 +141,13 @@ export default function AuthPage() {
           )}
         </button>
 
-        <div className="flex items-center gap-3 my-2">
+        <div className="flex items-center gap-3 my-1">
           <div className="h-px flex-1 bg-[#353437]/60" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]/50">Or Password</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]/50">Or Passcode</span>
           <div className="h-px flex-1 bg-[#353437]/60" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {tab === "signup" && (
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Full Name</label>
@@ -149,7 +155,7 @@ export default function AuthPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Alex Rivers"
+                placeholder="Vikrant Ahiwale"
                 className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
               />
             </div>
@@ -203,18 +209,41 @@ export default function AuthPage() {
               "Create Account"
             )}
           </button>
-
-          <div className="pt-1 text-center">
-            <button
-              type="button"
-              onClick={() => router.push("/verify")}
-              className="text-[10px] text-[#e5beb2] hover:text-[#ffb59d] transition-colors flex items-center justify-center gap-1 mx-auto"
-            >
-              <span className="material-symbols-outlined text-sm text-[#ffb59d]">fingerprint</span>
-              Biometric Fast Pass
-            </button>
-          </div>
         </form>
+
+        {/* Demo Credentials Box */}
+        <div className="pt-2">
+          <div className="p-3 rounded-xl bg-[#131315] border border-[#ff570e]/30 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#ff570e] flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs">key</span>
+                Demo Credentials
+              </span>
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-[#ff570e]/20 text-[#ffb59d] hover:bg-[#ff570e]/40 transition-colors"
+              >
+                Auto Fill
+              </button>
+            </div>
+            <div className="text-[11px] text-[#e5beb2] space-y-0.5">
+              <p><span className="text-white font-medium">Email:</span> athlete@habitproof.com</p>
+              <p><span className="text-white font-medium">Password:</span> demo123</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-1 text-center">
+          <button
+            type="button"
+            onClick={() => router.push("/verify")}
+            className="text-[10px] text-[#e5beb2] hover:text-[#ffb59d] transition-colors flex items-center justify-center gap-1 mx-auto"
+          >
+            <span className="material-symbols-outlined text-sm text-[#ffb59d]">fingerprint</span>
+            Biometric Fast Pass Demo
+          </button>
+        </div>
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 import { api, HabitResponse, CheckInResponse } from "@/services/api";
 
 const FALLBACK_HABITS = [
@@ -15,6 +16,7 @@ const FALLBACK_PROOF_FEED = [
 
 export default function DashboardPage() {
   const [habits, setHabits] = useState(FALLBACK_HABITS);
+  const [showSettings, setShowSettings] = useState(false);
   const [stats, setStats] = useState({
     pct: 50,
     activeStreak: 5,
@@ -98,7 +100,7 @@ export default function DashboardPage() {
           <button className="p-1.5 hover:opacity-80 active:scale-95 transition-all">
             <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 24 }}>notifications</span>
           </button>
-          <button className="p-1.5 hover:opacity-80 active:scale-95 transition-all">
+          <button onClick={() => setShowSettings(true)} className="p-1.5 hover:opacity-80 active:scale-95 transition-all">
             <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 24 }}>settings</span>
           </button>
         </div>
@@ -277,6 +279,7 @@ export default function DashboardPage() {
         </section>
       </main>
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );

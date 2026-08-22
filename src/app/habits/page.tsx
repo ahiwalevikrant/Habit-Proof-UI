@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 import { api, HabitCategory } from "@/services/api";
 
 const FALLBACK_HABITS = [
@@ -18,6 +19,7 @@ const CATEGORIES = [
 export default function HabitsPage() {
   const [habits, setHabits] = useState(FALLBACK_HABITS);
   const [showModal, setShowModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<HabitCategory>("FITNESS");
   const [newHabit, setNewHabit] = useState({ name: "", description: "", selfieRequired: true });
   const [isSaving, setIsSaving] = useState(false);
@@ -102,7 +104,7 @@ export default function HabitsPage() {
       <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
         <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">Habit-proof</h1>
         <div className="flex items-center gap-3">
-          <button className="p-1 text-[#e5beb2] hover:opacity-80">
+          <button onClick={() => setShowSettings(true)} className="p-1 text-[#e5beb2] hover:opacity-80">
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
           </button>
           <div className="w-8 h-8 rounded-full overflow-hidden border border-[#ac897e]/30 bg-[#353437] flex items-center justify-center">
@@ -305,6 +307,7 @@ export default function HabitsPage() {
         </div>
       )}
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );

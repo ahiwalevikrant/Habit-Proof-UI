@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 
 const TIMELINE_ENTRIES = [
   {
@@ -51,6 +52,7 @@ const FILTERS = ["ALL ACTIVITY", "WORKOUTS", "NUTRITION", "MINDFULNESS"];
 
 export default function TimelinePage() {
   const [activeFilter, setActiveFilter] = useState("ALL ACTIVITY");
+  const [showSettings, setShowSettings] = useState(false);
 
   const filteredEntries = TIMELINE_ENTRIES.filter((entry) => {
     if (activeFilter === "ALL ACTIVITY") return true;
@@ -73,7 +75,7 @@ export default function TimelinePage() {
             Habit-proof
           </h1>
         </div>
-        <button className="text-[#ffb59d] hover:opacity-80">
+        <button onClick={() => setShowSettings(true)} className="text-[#ffb59d] hover:opacity-80 p-1">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
       </header>
@@ -229,6 +231,7 @@ export default function TimelinePage() {
         </div>
       </main>
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );

@@ -2,6 +2,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import SettingsModal from "@/components/SettingsModal";
 
 function ResultContent() {
   const router = useRouter();
@@ -192,6 +193,8 @@ function ResultContent() {
 }
 
 export default function VerificationResultPage() {
+  const [showSettings, setShowSettings] = useState(false);
+
   return (
     <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
       {/* Top Navigation */}
@@ -208,7 +211,7 @@ export default function VerificationResultPage() {
             Habit-proof
           </span>
         </div>
-        <button className="text-[#e5beb2] hover:opacity-80">
+        <button onClick={() => setShowSettings(true)} className="text-[#e5beb2] hover:opacity-80 p-1">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
       </header>
@@ -220,6 +223,7 @@ export default function VerificationResultPage() {
         </Suspense>
       </main>
 
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <BottomNav />
     </div>
   );
