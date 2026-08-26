@@ -201,10 +201,10 @@ export default function HabitsPage() {
       {/* Create Habit Modal */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 backdrop-blur-md"
           onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
         >
-          <div className="w-full max-w-[440px] rounded-t-3xl p-5 pb-10 shadow-2xl relative bg-[#1b1b1d] border-t border-[#5c4037]/40">
+          <div className="w-full max-w-[440px] max-h-[88vh] overflow-y-auto rounded-t-3xl p-5 pb-12 shadow-2xl relative bg-[#1b1b1d] border-t border-[#5c4037]/50 no-scrollbar">
             {/* Drag handle */}
             <div
               className="w-10 h-1 rounded-full mx-auto mb-6 bg-[#353437] cursor-pointer"

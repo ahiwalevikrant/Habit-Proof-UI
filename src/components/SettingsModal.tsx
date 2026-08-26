@@ -31,19 +31,25 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-fade-in"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-5 pb-8 bg-[#1b1b1d] border border-[#5c4037]/40 shadow-2xl relative space-y-5 text-[#e5e1e4]">
+      <div className="w-full max-w-[440px] max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 pb-10 sm:pb-6 bg-[#1b1b1d] border border-[#5c4037]/50 shadow-2xl relative space-y-4 text-[#e5e1e4] no-scrollbar">
+        {/* Mobile Drag Indicator */}
+        <div
+          className="w-12 h-1.5 rounded-full bg-[#353437] mx-auto mb-2 cursor-pointer sm:hidden hover:bg-[#5c4037]"
+          onClick={onClose}
+        />
+
         {/* Header */}
-        <div className="flex justify-between items-center pb-2 border-b border-[#353437]">
+        <div className="flex justify-between items-center pb-2 border-b border-[#353437]/70">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 22 }}>settings</span>
             <h2 className="text-lg font-bold text-white tracking-tight">System Settings</h2>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#2a2a2c] flex items-center justify-center text-[#e5beb2] hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full bg-[#2a2a2c] hover:bg-[#353437] flex items-center justify-center text-[#e5beb2] hover:text-white transition-colors"
           >
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
@@ -134,11 +140,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </button>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-2 space-y-2">
+        {/* Action Buttons - Distinct, prominently visible Logout */}
+        <div className="pt-2">
           <button
             onClick={handleLogout}
-            className="w-full py-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-400 hover:bg-red-900/40 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all"
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-red-950/70 to-red-900/60 border border-red-500/40 text-red-300 hover:text-white hover:border-red-500 hover:bg-red-800/60 text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_4px_16px_rgba(239,68,68,0.2)] cursor-pointer"
           >
             <span className="material-symbols-outlined text-base">logout</span>
             Log Out Account
