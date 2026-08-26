@@ -7,13 +7,8 @@ import SettingsModal from "@/components/SettingsModal";
 function ResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isSuccess, setIsSuccess] = useState(
-    searchParams.get("success") !== "false"
-  );
-
-  const toggleState = () => {
-    setIsSuccess((prev) => !prev);
-  };
+  const isSuccess = searchParams.get("success") !== "false";
+  const score = searchParams.get("score") || "95";
 
   return (
     <>
@@ -36,31 +31,22 @@ function ResultContent() {
               Proof Verified!
             </h1>
             <p className="text-xs text-[#e5beb2]">
-              Verification engine confirmed your identity.
+              AI Verification engine confirmed your biometric check-in.
             </p>
           </div>
 
           {/* Details Card */}
           <div className="glass-card w-full rounded-2xl p-4 space-y-3 border border-[#353437]/60 bg-[#201f21]/80">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-[#e5beb2] font-bold uppercase tracking-wider text-[10px]">
-                Habit Title
-              </span>
-              <span className="text-white font-bold">
-                5AM Run & Prep
-              </span>
-            </div>
-            <div className="h-[1px] bg-[#353437]/50 w-full" />
-            <div className="flex justify-between items-center text-xs">
-              <div className="flex flex-col">
+              <div className="flex flex-col flex-1">
                 <span className="text-[#e5beb2] font-bold uppercase tracking-wider text-[10px]">
-                  Face Match Score
+                  Face Match Confidence
                 </span>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="w-20 h-1.5 bg-[#353437] rounded-full overflow-hidden">
-                    <div className="bg-[#4edea3] h-full w-[98%]" />
+                  <div className="w-24 h-1.5 bg-[#353437] rounded-full overflow-hidden">
+                    <div className="bg-[#4edea3] h-full" style={{ width: `${score}%` }} />
                   </div>
-                  <span className="text-[#4edea3] font-bold text-xs">98%</span>
+                  <span className="text-[#4edea3] font-bold text-xs">{score}%</span>
                 </div>
               </div>
               <div className="text-right">
@@ -79,21 +65,16 @@ function ResultContent() {
 
           {/* Streak Reward Card */}
           <div className="animate-streak-pulse bg-[#ff570e] text-[#511500] w-full p-4 rounded-2xl flex items-center justify-between overflow-hidden relative group shadow-[0_4px_20px_rgba(255,87,14,0.4)]">
-            <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[70px]">
-                local_fire_department
-              </span>
-            </div>
             <div className="flex items-center gap-2.5 relative z-10">
               <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                 local_fire_department
               </span>
               <div className="flex flex-col">
                 <span className="text-sm font-bold leading-tight">
-                  Streak Upgraded!
+                  Streak Logged!
                 </span>
                 <span className="text-[#511500]/80 text-[10px] font-bold">
-                  6 day streak
+                  Daily consistency maintained
                 </span>
               </div>
             </div>
@@ -105,7 +86,7 @@ function ResultContent() {
           {/* Action Button */}
           <button
             onClick={() => router.push("/")}
-            className="w-full bg-[#ff570e] text-[#511500] text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl shadow-[0_4px_16px_rgba(255,87,14,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[#ff570e] text-[#511500] text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl shadow-[0_4px_16px_rgba(255,87,14,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             Go to Dashboard
             <span className="material-symbols-outlined text-base">arrow_forward</span>
@@ -130,32 +111,8 @@ function ResultContent() {
               Verification Failed
             </h1>
             <p className="text-xs text-[#e5beb2]">
-              Biometric markers did not match profile.
+              Biometric markers did not match your reference face profile.
             </p>
-          </div>
-
-          {/* Details Card */}
-          <div className="glass-card w-full rounded-2xl p-4 space-y-3 border border-[#ffb4ab]/20 bg-[#201f21]/80">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#e5beb2] font-bold uppercase tracking-wider text-[10px]">
-                Reason
-              </span>
-              <span className="text-[#ffb4ab] font-bold">Identity Mismatch</span>
-            </div>
-            <div className="h-[1px] bg-[#353437]/50 w-full" />
-            <div className="flex justify-between items-center text-xs">
-              <div className="flex flex-col">
-                <span className="text-[#e5beb2] font-bold uppercase tracking-wider text-[10px]">
-                  Match Confidence
-                </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-20 h-1.5 bg-[#353437] rounded-full overflow-hidden">
-                    <div className="bg-[#ffb4ab] h-full w-[14%]" />
-                  </div>
-                  <span className="text-[#ffb4ab] font-bold text-xs">14%</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Streak Risk Alert */}
@@ -164,30 +121,20 @@ function ResultContent() {
               warning
             </span>
             <span className="text-xs text-[#e5e1e4]">
-              Streak is at risk! Attempt verification again in 30:00.
+              Please retake the selfie in a well-lit area looking straight at the camera.
             </span>
           </div>
 
           {/* Action Buttons */}
           <button
             onClick={() => router.push("/verify")}
-            className="w-full bg-[#353437] text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl border border-[#ac897e]/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-[#39393b]"
+            className="w-full bg-[#353437] text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl border border-[#ac897e]/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-[#39393b] cursor-pointer"
           >
             Try Again
             <span className="material-symbols-outlined text-base">refresh</span>
           </button>
         </section>
       )}
-
-      {/* State Preview Toggle */}
-      <div className="pt-4 flex flex-col items-center">
-        <button
-          onClick={toggleState}
-          className="text-[#e5beb2] text-[10px] font-bold uppercase tracking-widest border border-[#353437] px-3.5 py-1.5 rounded-full hover:bg-[#2a2a2c] transition-colors"
-        >
-          {isSuccess ? "Preview Failure State" : "Reset to Success"}
-        </button>
-      </div>
     </>
   );
 }
@@ -199,18 +146,9 @@ export default function VerificationResultPage() {
     <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
       {/* Top Navigation */}
       <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#353437] overflow-hidden border border-[#ffb59d]/20">
-            <img
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtFCp4xzUV5vHcpXjxCbJBv3o7CSO_VR_qTopcSy8CIKFiEOmJTqyNJjpNB2zPjGmyrF7Sl0DjsPxNeWYws5BQFSvdU4ah5pLY2r0B8ob9GBB-4Pbgruui3SDX_SLiYoInI766mGkCp5K0U43tJwWZiMx9tGD3muaKoRzPkw4U-uF3EVbrGHkaIyUrxSleSikV-e8rMiwf9dtQ0dn0Alq6ctZAHjplpFNR8LPNkM3AN1oBvcPBvCPSl8MyKzE13ILxIatPoBsqvJU"
-              alt="Profile"
-            />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-[#ffb59d]">
-            Habit-proof
-          </span>
-        </div>
+        <span className="text-xl font-bold tracking-tight text-[#ffb59d]">
+          Habit-proof
+        </span>
         <button onClick={() => setShowSettings(true)} className="text-[#e5beb2] hover:opacity-80 p-1">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
@@ -218,7 +156,7 @@ export default function VerificationResultPage() {
 
       {/* Main Content Canvas */}
       <main className="flex-1 px-4 pt-4 pb-28 flex flex-col items-center justify-center space-y-4 w-full">
-        <Suspense fallback={<div className="text-xs text-[#e5beb2]">Loading verification details...</div>}>
+        <Suspense fallback={<div className="text-xs text-[#e5beb2]">Loading verification result...</div>}>
           <ResultContent />
         </Suspense>
       </main>

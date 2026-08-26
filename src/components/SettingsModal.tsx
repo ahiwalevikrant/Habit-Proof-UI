@@ -17,7 +17,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   useEffect(() => {
     if (isOpen) {
       const u = api.auth.getCurrentUser();
-      setUser(u || { name: "Vikrant Ahiwale", email: "athlete@habitproof.com" });
+      setUser(u || { name: "Active Athlete", email: "athlete@habitproof.com" });
     }
   }, [isOpen]);
 
