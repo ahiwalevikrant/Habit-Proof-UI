@@ -276,7 +276,7 @@ export default function HabitsPage() {
       {/* New Habit Creation Modal / Drawer */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg glass-card rounded-3xl p-6 lg:p-8 border border-[#5c4037]/60 bg-[#1b1b1d] shadow-2xl space-y-5">
+          <div className="w-full max-w-[540px] glass-card rounded-3xl p-6 lg:p-8 border border-[#5c4037]/60 bg-[#1b1b1d] shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-[#353437]/50 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-white tracking-tight">Create New Habit Protocol</h3>

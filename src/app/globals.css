@@ -69,14 +69,6 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1.5rem;
   --radius-full: 9999px;
-
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-container: 20px;
 }
 
 /* ─── Base Resets ─── */

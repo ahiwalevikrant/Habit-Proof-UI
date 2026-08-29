@@ -57,7 +57,7 @@ export default function AuthPage() {
         }}
       />
 
-      <div className="w-full max-w-md flex flex-col items-center z-10 space-y-6">
+      <div className="w-full max-w-[440px] flex flex-col items-center z-10 space-y-6">
         {/* Brand Logo Header */}
         <header className="flex flex-col items-center text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#ff570e] to-[#ff8c53] flex items-center justify-center shadow-[0_0_25px_rgba(255,87,14,0.5)]">
