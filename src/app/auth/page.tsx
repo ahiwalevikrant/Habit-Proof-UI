@@ -33,7 +33,7 @@ export default function AuthPage() {
         await api.auth.signup(name.trim(), email.trim(), password.trim());
       }
       setDone(true);
-      setTimeout(() => router.push("/"), 500);
+      setTimeout(() => router.push("/"), 400);
     } catch (err: any) {
       setErrorMsg(err.message || "Authentication failed. Please check credentials or backend status.");
     } finally {
@@ -42,123 +42,149 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden bg-[#131315] text-[#e5e1e4]">
-      {/* Atmospheric glow blobs */}
-      <div className="glow-accent" style={{ top: -100, left: -100 }} />
-      <div className="glow-accent" style={{ bottom: -100, right: -100 }} />
+    <div className="w-full min-h-screen flex items-center justify-center p-4 bg-[#0a0a0c] text-[#e5e1e4] relative overflow-hidden">
+      {/* Background glow accents */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          top: "10%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 450,
+          height: 450,
+          background: "radial-gradient(circle, rgba(255,87,14,0.15) 0%, rgba(0,0,0,0) 70%)",
+          filter: "blur(60px)",
+        }}
+      />
 
-      {/* Logo */}
-      <header className="mb-6 flex flex-col items-center animate-fade-in z-10 text-center">
-        <div className="mb-3 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#ff570e] shadow-[0_0_20px_rgba(255,87,14,0.5)]">
-          <span className="material-symbols-outlined icon-fill text-white" style={{ fontSize: 28 }}>bolt</span>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tighter uppercase text-white">
-          HABIT<span className="text-[#ff570e]">PROOF</span>
-        </h1>
-        <p className="text-[10px] uppercase tracking-widest mt-0.5 text-[#e5beb2]/70 font-semibold">
-          Elite Habit Engineering
-        </p>
-      </header>
-
-      {/* Auth Card */}
-      <main className="w-full glass-card rounded-2xl p-5 border border-[#353437]/60 bg-[#201f21]/80 z-10 space-y-4">
-        {/* Tabs */}
-        <div className="flex border-b border-[#353437]/50 mb-3">
-          <button
-            onClick={() => { setTab("login"); setErrorMsg(""); }}
-            className="flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-all duration-200"
-            style={{
-              color: tab === "login" ? "#ffb59d" : "#e5beb2",
-              borderBottom: tab === "login" ? "2px solid #ffb59d" : "2px solid transparent",
-            }}
-          >
-            Log In
-          </button>
-          <button
-            onClick={() => { setTab("signup"); setErrorMsg(""); }}
-            className="flex-1 pb-3 text-xs font-bold uppercase tracking-wider transition-all duration-200"
-            style={{
-              color: tab === "signup" ? "#ffb59d" : "#e5beb2",
-              borderBottom: tab === "signup" ? "2px solid #ffb59d" : "2px solid transparent",
-            }}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {errorMsg && (
-          <div className="p-2.5 rounded-xl bg-red-950/60 border border-red-500/30 text-red-300 text-xs text-center font-medium">
-            {errorMsg}
+      <div className="w-full max-w-[440px] flex flex-col items-center z-10 space-y-6">
+        {/* Brand Logo Header */}
+        <header className="flex flex-col items-center text-center space-y-2">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#ff570e] to-[#ff8c53] flex items-center justify-center shadow-[0_0_25px_rgba(255,87,14,0.5)]">
+            <span className="material-symbols-outlined icon-fill text-white" style={{ fontSize: 32 }}>bolt</span>
           </div>
-        )}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase leading-none">
+              HABIT<span className="text-[#ff570e]">PROOF</span>
+            </h1>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d] mt-1">
+              Biometric Habit Accountability
+            </p>
+          </div>
+        </header>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {tab === "signup" && (
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Full Name</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-                className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
-              />
+        {/* Auth Glass Card */}
+        <main className="w-full glass-card rounded-3xl p-6 sm:p-8 border border-[#353437]/70 bg-[#1b1b1d]/90 shadow-2xl space-y-5">
+          {/* Navigation Tabs */}
+          <div className="flex border-b border-[#353437]/60 pb-1">
+            <button
+              type="button"
+              onClick={() => { setTab("login"); setErrorMsg(""); }}
+              className={`flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+                tab === "login"
+                  ? "text-[#ffb59d] border-b-2 border-[#ff570e]"
+                  : "text-[#e5beb2] hover:text-white"
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTab("signup"); setErrorMsg(""); }}
+              className={`flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+                tab === "signup"
+                  ? "text-[#ffb59d] border-b-2 border-[#ff570e]"
+                  : "text-[#e5beb2] hover:text-white"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-950/70 border border-red-500/30 text-red-300 text-xs text-center font-medium">
+              {errorMsg}
             </div>
           )}
 
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Email Address</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="athlete@example.com"
-              className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2]">Password</label>
-              {tab === "login" && (
-                <a href="#" className="text-[9px] text-[#ffb59d] hover:underline">Forgot?</a>
-              )}
-            </div>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 mt-2 rounded-xl text-xs font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? (
-              <>
-                <span className="material-symbols-outlined animate-spin text-sm">sync</span>
-                Authenticating...
-              </>
-            ) : done ? (
-              <>
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                Success
-              </>
-            ) : tab === "login" ? (
-              "Sign In to HabitProof"
-            ) : (
-              "Create My Account"
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {tab === "signup" && (
+              <div>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-[#ffb59d] mb-1.5 block">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Alex Morgan"
+                  className="w-full rounded-xl px-4 py-3 text-sm bg-[#131315] border border-[#353437] text-white focus:outline-none focus:border-[#ff570e] transition-colors"
+                />
+              </div>
             )}
-          </button>
-        </form>
-      </main>
+
+            <div>
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-[#ffb59d] mb-1.5 block">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="athlete@habitproof.com"
+                className="w-full rounded-xl px-4 py-3 text-sm bg-[#131315] border border-[#353437] text-white focus:outline-none focus:border-[#ff570e] transition-colors"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-[#ffb59d]">
+                  Password
+                </label>
+                {tab === "login" && (
+                  <span className="text-[10px] text-[#ac897e] hover:text-[#ffb59d] cursor-pointer">
+                    Forgot?
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-xl px-4 py-3 text-sm bg-[#131315] border border-[#353437] text-white focus:outline-none focus:border-[#ff570e] transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 mt-2 rounded-xl text-xs font-black tracking-widest uppercase active:scale-[0.98] transition-all bg-[#ff570e] hover:bg-[#ff6f30] text-[#511500] shadow-[0_4px_18px_rgba(255,87,14,0.4)] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin text-base">sync</span>
+                  Authenticating...
+                </>
+              ) : done ? (
+                <>
+                  <span className="material-symbols-outlined text-base">check_circle</span>
+                  Success
+                </>
+              ) : tab === "login" ? (
+                "Sign In to HabitProof"
+              ) : (
+                "Create My Account"
+              )}
+            </button>
+          </form>
+        </main>
+      </div>
     </div>
   );
 }

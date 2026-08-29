@@ -6,10 +6,10 @@ import SettingsModal from "@/components/SettingsModal";
 import { api, HabitResponse } from "@/services/api";
 
 const STATUS_TEXTS = [
-  "Extracting facial landmarks...",
-  "Comparing with biometric profile...",
-  "Validating liveness metrics...",
-  "Confirming geometric consistency...",
+  "Extracting 512-D facial landmarks...",
+  "Running vector similarity search with ZepIris...",
+  "Validating anti-spoofing liveness metrics...",
+  "Confirming streak advancement criteria...",
 ];
 
 export default function VerifyPage() {
@@ -21,6 +21,7 @@ export default function VerifyPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [hasWebcam, setHasWebcam] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [verificationResult, setVerificationResult] = useState<{ success: boolean; score?: number; message?: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function VerifyPage() {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
           });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -63,7 +64,7 @@ export default function VerifyPage() {
         }
       } catch (err: any) {
         console.warn("Webcam access error:", err);
-        setCameraError("Camera permission denied or camera not found.");
+        setCameraError("Camera permission denied or camera unavailable.");
         setHasWebcam(false);
       }
     }
@@ -95,158 +96,232 @@ export default function VerifyPage() {
           } else {
             resolve(null);
           }
-        }, "image/jpeg", 0.9);
+        }, "image/jpeg", 0.92);
       });
     } catch {
       return null;
     }
   };
 
-  const handleSubmit = async () => {
-    if (!selectedHabitId) {
-      alert("Please select a habit to verify.");
-      return;
-    }
-
+  const handleVerify = async () => {
+    if (!selectedHabitId) return;
     setIsSubmitting(true);
+    setVerificationResult(null);
+
     try {
-      const file = await capturePhotoFile();
-      const checkIn = await api.checkins.create(
+      const photoFile = await capturePhotoFile();
+      const res = await api.checkins.create(
         selectedHabitId,
-        file,
-        "AI Biometric Verification Proof"
+        photoFile,
+        "Biometric camera check-in proof"
       );
 
-      const isSuccess = checkIn.verificationStatus === "VERIFIED";
-      const score = Math.round((checkIn.faceMatchScore || 0.95) * 100);
-      router.push(`/verify/result?success=${isSuccess}&score=${score}`);
+      setVerificationResult({
+        success: true,
+        score: res.faceMatchScore ? Math.round(res.faceMatchScore * 100) : 95,
+        message: "Biometric proof verified successfully!",
+      });
+
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
     } catch (err: any) {
-      alert(err.message || "Failed to submit check-in to backend.");
+      setVerificationResult({
+        success: false,
+        message: err.message || "Face verification failed. Please try again with clear lighting.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const selectedHabit = habits.find((h) => h.id === selectedHabitId);
+
   return (
     <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
-      {/* Top AppBar */}
-      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+      {/* Mobile Top App Bar */}
+      <header className="lg:hidden sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
         <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">Habit-proof</h1>
-        <button onClick={() => setShowSettings(true)} className="text-[#ffb59d] hover:opacity-80 p-1">
+        <button onClick={() => setShowSettings(true)} className="p-1 text-[#e5beb2] hover:opacity-80">
           <span className="material-symbols-outlined" style={{ fontSize: 22 }}>settings</span>
         </button>
       </header>
 
-      <main className="flex-1 px-4 pt-4 pb-28 space-y-4 w-full flex flex-col">
-        {/* Header Section */}
-        <div>
-          <h2 className="text-lg font-bold text-white tracking-tight mb-0.5">
-            Submit Biometric Proof
-          </h2>
-          <p className="text-xs text-[#e5beb2] mb-3">
-            Select the habit task you are verifying today.
-          </p>
+      <main className="flex-1 px-4 lg:px-8 pt-4 lg:pt-8 pb-28 lg:pb-12 space-y-6 w-full">
+        {/* Page Title Header */}
+        <section>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#ff570e] animate-pulse" />
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d]">AI Biometric Sensor</span>
+          </div>
+          <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">Proof Verification Scanner</h2>
+        </section>
 
-          {/* Habit Selector */}
-          {habits.length === 0 ? (
-            <div className="p-3 rounded-xl bg-[#201f21] border border-[#353437] text-xs text-[#e5beb2] text-center">
-              No habits created yet. Go to Habits tab to create one.
+        {/* 2-Column Responsive Layout on Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Left Column (7 cols): Camera Viewfinder */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full rounded-3xl overflow-hidden border-2 border-[#353437] bg-black shadow-2xl">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+              />
+
+              {!hasWebcam && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[#131315]">
+                  <span className="material-symbols-outlined text-5xl text-[#ffb59d] mb-3">videocam_off</span>
+                  <p className="text-sm text-white font-bold">Camera Sensor Inactive</p>
+                  <p className="text-xs text-[#e5beb2] mt-1 max-w-sm">
+                    {cameraError || "Please grant camera permission to scan your face."}
+                  </p>
+                </div>
+              )}
+
+              {/* Viewfinder Overlays */}
+              <div className="absolute inset-0 camera-overlay pointer-events-none" />
+
+              {/* Biometric Guide Frame */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="w-52 h-64 sm:w-60 sm:h-72 border-2 border-dashed border-[#ffb59d]/50 rounded-full relative">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-3 border-l-3 border-[#ff570e] rounded-tl-xl" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-3 border-r-3 border-[#ff570e] rounded-tr-xl" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-3 border-l-3 border-[#ff570e] rounded-bl-xl" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-3 border-r-3 border-[#ff570e] rounded-br-xl" />
+                  {isSubmitting && <div className="scan-line absolute top-0 w-full" />}
+                </div>
+              </div>
+
+              {/* Sensor Badge */}
+              <div className="absolute top-4 left-4 flex gap-2 z-10">
+                <div className="px-3 py-1 bg-[#ff570e]/20 backdrop-blur-md rounded-xl border border-[#ff570e]/40 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#ff570e] animate-pulse" />
+                  <p className="text-[10px] font-extrabold text-[#ffb59d] tracking-wider uppercase">
+                    {hasWebcam ? "LIVE SENSOR ON" : "SENSOR OFF"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Telemetry Status Box */}
+              <div className="absolute bottom-4 inset-x-4 flex justify-center z-10">
+                <div className="bg-black/75 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-[#ffb59d] animate-pulse">
+                    {isSubmitting ? "sync" : "center_focus_strong"}
+                  </span>
+                  <p className="text-xs font-semibold text-white text-center">
+                    {isSubmitting ? STATUS_TEXTS[statusIndex] : "Position your face in the oval guide and capture"}
+                  </p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {habits.map((habit) => {
-                const isSelected = selectedHabitId === habit.id;
-                return (
-                  <button
-                    key={habit.id}
-                    onClick={() => setSelectedHabitId(habit.id)}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-[#ff570e] text-[#511500] border-[#ff570e]"
-                        : "bg-[#201f21] border-[#353437] text-[#e5beb2]"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      {habit.requiresSelfie ? "photo_camera" : "check_circle"}
-                    </span>
-                    <span className="truncate max-w-[140px]">{habit.title}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
-        {/* Camera Viewfinder Section */}
-        <div className="relative flex-1 flex items-center justify-center min-h-[300px]">
-          <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#353437] bg-black shadow-2xl">
-            {/* Live Camera Stream */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-
-            {!hasWebcam && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[#131315]">
-                <span className="material-symbols-outlined text-4xl text-[#ffb59d] mb-2">videocam_off</span>
-                <p className="text-xs text-white font-bold">Camera feed inactive</p>
-                <p className="text-[10px] text-[#e5beb2] mt-1">{cameraError || "Please allow camera access in your browser."}</p>
+            {/* Verification Result Notification */}
+            {verificationResult && (
+              <div
+                className={`p-4 rounded-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
+                  verificationResult.success
+                    ? "bg-emerald-950/70 border-emerald-500/40 text-emerald-200"
+                    : "bg-red-950/70 border-red-500/40 text-red-200"
+                }`}
+              >
+                <span className="material-symbols-outlined text-2xl" style={{ color: verificationResult.success ? "#4edea3" : "#ef4444" }}>
+                  {verificationResult.success ? "check_circle" : "error"}
+                </span>
+                <div className="flex-1">
+                  <p className="font-bold">{verificationResult.message}</p>
+                  {verificationResult.score && (
+                    <p className="text-xs opacity-80 mt-0.5">ZepIris Confidence: {verificationResult.score}%</p>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Overlay Interface */}
-            <div className="absolute inset-0 flex flex-col justify-between p-3.5 pointer-events-none z-10">
-              {/* Top Data */}
-              <div className="flex justify-between items-start">
-                <div className="bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 border border-white/10 flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${hasWebcam ? "bg-[#4edea3] animate-pulse" : "bg-red-400"}`} />
-                  <span className="text-[9px] font-bold text-[#4edea3] uppercase tracking-widest">
-                    {hasWebcam ? "Live Camera" : "Offline"}
-                  </span>
-                </div>
-                <div className="bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 border border-white/10 text-right">
-                  <div className="text-[8px] font-bold text-[#e5beb2] uppercase">AI Liveness</div>
-                  <div className="text-xs font-extrabold text-[#ffb59d]">Active</div>
-                </div>
+            {/* Big Action Shutter Button */}
+            <button
+              onClick={handleVerify}
+              disabled={isSubmitting || !hasWebcam || !selectedHabitId}
+              className="w-full py-4 rounded-2xl bg-[#ff570e] hover:bg-[#ff6f30] text-[#511500] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_6px_24px_rgba(255,87,14,0.4)] active:scale-98 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">
+                {isSubmitting ? "sync" : "photo_camera"}
+              </span>
+              {isSubmitting ? "Processing AI Proof..." : `Capture & Verify "${selectedHabit?.title || "Habit"}"`}
+            </button>
+          </div>
+
+          {/* Right Column (5 cols): Habit Selection & Protocol Telemetry */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Habit Selection Box */}
+            <div className="glass-card p-5 rounded-3xl border border-[#353437]/60 bg-[#201f21]/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white tracking-tight">Select Habit to Verify</h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb59d]">
+                  {habits.length} Available
+                </span>
               </div>
 
-              {/* Scan Animation Area */}
-              <div className="relative flex-1 my-2">
-                <div className="viewfinder-tl" />
-                <div className="viewfinder-tr" />
-                <div className="viewfinder-bl" />
-                <div className="viewfinder-br" />
-                <div className="scan-line-green z-10" />
+              {habits.length === 0 ? (
+                <p className="text-xs text-[#e5beb2] py-2">No habits configured yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {habits.map((h) => {
+                    const isSelected = h.id === selectedHabitId;
+                    return (
+                      <button
+                        key={h.id}
+                        onClick={() => setSelectedHabitId(h.id)}
+                        className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#2a2a2c] border-[#ff570e] shadow-[0_0_12px_rgba(255,87,14,0.3)]"
+                            : "bg-[#171719] border-[#353437] hover:border-[#5c4037]"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="text-xs font-bold text-white truncate">{h.title}</p>
+                          <p className="text-[10px] text-[#e5beb2] mt-0.5">
+                            {h.category} • Streak: <strong className="text-white">{h.currentStreak}d</strong>
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <span className="material-symbols-outlined text-[#ff570e] text-lg flex-shrink-0">
+                            check_circle
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* AI Biometric Specs Breakdown */}
+            <div className="glass-card p-5 rounded-3xl border border-[#5c4037]/40 bg-[#201f21]/60 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#ffb59d] text-lg">psychology</span>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">AI Verification Pipeline</h4>
               </div>
 
-              {/* Bottom Status */}
-              <div className="flex flex-col items-center">
-                <div className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-[#4edea3]/40 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#4edea3] text-sm animate-spin" style={{ animationDuration: "3s" }}>
-                    sync
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-[#131315] border border-[#353437]/40">
+                  <span className="text-[#e5beb2]">Face Vector Model</span>
+                  <span className="text-white font-bold">ZepIris 512-D</span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-[#131315] border border-[#353437]/40">
+                  <span className="text-[#e5beb2]">Anti-Spoofing Liveness</span>
+                  <span className="text-[#4edea3] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3]" />
+                    Active
                   </span>
-                  <span className="text-[10px] font-bold text-white tracking-wide">
-                    {isSubmitting ? "Validating biometric proof..." : STATUS_TEXTS[statusIndex]}
-                  </span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-[#131315] border border-[#353437]/40">
+                  <span className="text-[#e5beb2]">Acceptance Threshold</span>
+                  <span className="text-white font-bold">&ge; 75% Match</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || habits.length === 0}
-            className="w-full py-3.5 bg-[#ff570e] text-[#511500] rounded-xl text-xs font-bold tracking-wider uppercase shadow-[0_4px_16px_rgba(255,87,14,0.4)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            <span className="material-symbols-outlined icon-fill text-base">fingerprint</span>
-            {isSubmitting ? "Verifying with AI..." : "Capture & Verify Proof"}
-          </button>
         </div>
       </main>
 

@@ -18,6 +18,7 @@ export default function HabitsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<HabitCategory>("FITNESS");
+  const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [newHabit, setNewHabit] = useState({ name: "", description: "", selfieRequired: true });
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -82,10 +83,14 @@ export default function HabitsPage() {
     );
   };
 
+  const filteredHabits = activeFilter === "ALL" 
+    ? habits 
+    : habits.filter((h) => h.category === activeFilter);
+
   return (
     <div className="w-full flex-1 flex flex-col bg-[#131315] text-[#e5e1e4]">
-      {/* Top App Bar */}
-      <header className="sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
+      {/* Mobile Top App Bar (Hidden on Desktop) */}
+      <header className="lg:hidden sticky top-0 z-40 w-full flex justify-between items-center px-4 h-16 bg-[#131315]/90 backdrop-blur-xl border-b border-[#353437]/50">
         <h1 className="text-xl font-bold tracking-tight text-[#ffb59d]">Habit-proof</h1>
         <div className="flex items-center gap-3">
           <button onClick={() => setShowSettings(true)} className="p-1 text-[#e5beb2] hover:opacity-80">
@@ -94,95 +99,172 @@ export default function HabitsPage() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pt-4 pb-28 space-y-5 w-full">
-        {/* Header */}
-        <section className="flex justify-between items-end gap-2">
+      <main className="flex-1 px-4 lg:px-8 pt-4 lg:pt-8 pb-28 lg:pb-12 space-y-6 w-full">
+        {/* Page Title & Controls */}
+        <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#ffb59d] mb-0.5">Consistency engine</p>
-            <h2 className="text-2xl font-bold text-white tracking-tight">My Habits</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d]">Consistency Protocols</span>
+              <span className="text-xs text-[#ac897e]">• {habits.length} Total</span>
+            </div>
+            <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">Active Habits</h2>
           </div>
+
           <button
             onClick={() => { setErrorMsg(""); setShowModal(true); }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold uppercase active:scale-95 transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_12px_rgba(255,87,14,0.4)] cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase active:scale-95 transition-all bg-[#ff570e] hover:bg-[#ff6f30] text-[#511500] shadow-[0_4px_16px_rgba(255,87,14,0.35)] cursor-pointer"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
-            NEW HABIT
+            <span className="material-symbols-outlined text-base">add</span>
+            New Habit Protocol
           </button>
         </section>
 
-        {/* Habit List */}
+        {/* Category Filter Tabs */}
+        <section className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => setActiveFilter("ALL")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex-shrink-0 cursor-pointer ${
+              activeFilter === "ALL"
+                ? "bg-[#ffb59d] text-[#511500] shadow-sm font-black"
+                : "bg-[#201f21] text-[#e5beb2] hover:text-white border border-[#353437]/60"
+            }`}
+          >
+            All Habits ({habits.length})
+          </button>
+
+          {CATEGORIES.map((cat) => {
+            const count = habits.filter((h) => h.category === cat.key).length;
+            const isSelected = activeFilter === cat.key;
+            return (
+              <button
+                key={cat.key}
+                onClick={() => setActiveFilter(cat.key)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+                  isSelected
+                    ? "bg-[#2a2a2c] text-white border-2 border-[#ff570e] shadow-sm"
+                    : "bg-[#201f21] text-[#e5beb2] hover:text-white border border-[#353437]/60"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm" style={{ color: cat.color }}>
+                  {cat.icon}
+                </span>
+                <span>{cat.label}</span>
+                <span className="text-[10px] opacity-60 ml-0.5">({count})</span>
+              </button>
+            );
+          })}
+        </section>
+
+        {/* Habits Grid - 3 columns on large desktop, 2 on tablet, 1 on mobile */}
         {loading ? (
-          <div className="p-10 text-center glass-card rounded-2xl border border-[#353437]/40 text-[#e5beb2] text-xs">
-            <span className="material-symbols-outlined animate-spin text-2xl mb-2 text-[#ff570e]">sync</span>
-            <p>Loading your habits from backend...</p>
+          <div className="p-16 text-center glass-card rounded-2xl border border-[#353437]/40 text-[#e5beb2] text-xs space-y-2">
+            <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-[#ff570e]">sync</span>
+            <p className="font-semibold text-white">Loading habits repository...</p>
           </div>
-        ) : habits.length === 0 ? (
-          <div className="p-8 text-center glass-card rounded-2xl border border-[#353437]/40 space-y-3">
-            <span className="material-symbols-outlined text-4xl text-[#ffb59d]">playlist_add</span>
-            <div>
-              <p className="text-sm font-bold text-white">No active habits</p>
-              <p className="text-xs text-[#e5beb2] mt-0.5">Create your first habit to begin building daily momentum.</p>
+        ) : filteredHabits.length === 0 ? (
+          <div className="p-12 text-center glass-card rounded-2xl border border-[#353437]/40 space-y-4 bg-[#201f21]/40">
+            <div className="w-16 h-16 rounded-2xl bg-[#2a2a2c] flex items-center justify-center mx-auto border border-[#353437]">
+              <span className="material-symbols-outlined text-4xl text-[#ffb59d]">playlist_add</span>
+            </div>
+            <div className="max-w-md mx-auto">
+              <p className="text-base font-bold text-white">No habits found in this category</p>
+              <p className="text-xs text-[#e5beb2] mt-1">Create a new habit or adjust your filter selection to track your routines.</p>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase bg-[#ff570e] text-[#511500] shadow-[0_2px_12px_rgba(255,87,14,0.4)] cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold uppercase bg-[#ff570e] text-[#511500] hover:bg-[#ff6f30] shadow-[0_4px_16px_rgba(255,87,14,0.4)] cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm">add</span>
-              Add Habit
+              <span className="material-symbols-outlined text-base">add</span>
+              Create Habit
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3.5 w-full">
-            {habits.map((habit) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredHabits.map((habit) => {
               const meta = getCategoryMeta(habit.category);
+              const todayStr = new Date().toISOString().split("T")[0];
+              const isDoneToday = habit.lastCheckInDate === todayStr;
+
               return (
                 <div
                   key={habit.id}
-                  className="glass-card rounded-2xl p-4 relative overflow-hidden group border border-[#353437]/60 bg-[#201f21]/80"
+                  className="glass-card p-5 rounded-2xl relative overflow-hidden border border-[#353437]/60 bg-[#201f21]/80 hover:border-[#5c4037] transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
                 >
-                  <div className="flex justify-between items-start gap-2 mb-2">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ background: meta.color, boxShadow: `0 0 8px ${meta.color}` }}
-                      />
-                      <h3 className="text-base font-bold text-white truncate">{habit.title}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {habit.requiresSelfie ? (
-                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb59d]/10 border border-[#ffb59d]/20 text-[#ffb59d] flex-shrink-0">
-                          <span className="material-symbols-outlined icon-fill text-xs">face</span>
-                          Selfie ID
+                  <div className="space-y-3">
+                    {/* Top Row: Category Icon & Actions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner"
+                          style={{ background: meta.bg }}
+                        >
+                          <span className="material-symbols-outlined" style={{ color: meta.color, fontSize: 22 }}>
+                            {meta.icon}
+                          </span>
                         </div>
-                      ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
-                          Active
-                        </span>
-                      )}
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d]">
+                            {meta.label}
+                          </span>
+                          <h3 className="text-base font-bold text-white tracking-tight leading-snug">
+                            {habit.title}
+                          </h3>
+                        </div>
+                      </div>
+
                       <button
                         onClick={() => deleteHabit(habit.id)}
-                        className="text-[#ac897e] hover:text-red-400 p-0.5 transition-colors"
-                        title="Delete Habit"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[#ac897e] hover:text-red-400 hover:bg-red-950/40 transition-all"
+                        title="Delete habit"
                       >
-                        <span className="material-symbols-outlined text-sm">delete</span>
+                        <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
+                    </div>
+
+                    {/* Description */}
+                    {habit.description && (
+                      <p className="text-xs text-[#e5beb2] line-clamp-2 leading-relaxed">
+                        {habit.description}
+                      </p>
+                    )}
+
+                    {/* Biometric Badge */}
+                    <div className="flex items-center gap-2">
+                      {habit.requiresSelfie ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-[#ff570e]/15 border border-[#ff570e]/30 text-[10px] font-bold text-[#ffb59d] uppercase tracking-wider">
+                          <span className="material-symbols-outlined text-xs">center_focus_strong</span>
+                          Biometric Proof Required
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-[#2a2a2c] text-[10px] font-bold text-[#ac897e] uppercase tracking-wider">
+                          Manual Check-In
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {habit.description && (
-                    <p className="text-xs text-[#e5beb2] mb-3 line-clamp-2">{habit.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#353437]/40">
-                    <div className="flex items-center gap-1.5 text-xs text-[#e5beb2]">
-                      <span className="material-symbols-outlined text-xs" style={{ color: meta.color }}>{meta.icon}</span>
-                      <span className="text-[10px] font-semibold uppercase">{meta.label}</span>
+                  {/* Bottom Stats & Check-in status */}
+                  <div className="pt-4 mt-4 border-t border-[#353437]/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base text-[#ffb59d]">local_fire_department</span>
+                        <span className="font-extrabold text-white">{habit.currentStreak}d</span>
+                      </div>
+                      <div className="text-[#ac897e] text-[11px]">
+                        Best: <strong className="text-[#e5beb2]">{habit.longestStreak}d</strong>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[#ffb59d] flex-shrink-0">
-                      <span className="material-symbols-outlined icon-fill text-base">local_fire_department</span>
-                      <span className="text-sm font-extrabold">{habit.currentStreak} days</span>
-                    </div>
+                    {isDoneToday ? (
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-[#00a572]/20 text-[#4edea3] border border-[#4edea3]/30 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">check</span>
+                        Done Today
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb59d]">
+                        Pending
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -191,119 +273,113 @@ export default function HabitsPage() {
         )}
       </main>
 
-      {/* Create Habit Modal */}
+      {/* New Habit Creation Modal / Drawer */}
       {showModal && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 backdrop-blur-md"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="w-full max-w-[440px] max-h-[88vh] overflow-y-auto rounded-t-3xl p-5 pb-12 shadow-2xl relative bg-[#1b1b1d] border-t border-[#5c4037]/50 no-scrollbar">
-            {/* Drag handle */}
-            <div
-              className="w-10 h-1 rounded-full mx-auto mb-5 bg-[#353437] cursor-pointer"
-              onClick={() => setShowModal(false)}
-            />
-            <header className="mb-4">
-              <h2 className="text-xl font-bold text-white tracking-tight">Initialize Habit</h2>
-              <p className="text-xs text-[#e5beb2] mt-0.5">Define your high-performance objective.</p>
-            </header>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-[540px] glass-card rounded-3xl p-6 lg:p-8 border border-[#5c4037]/60 bg-[#1b1b1d] shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[#353437]/50 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-tight">Create New Habit Protocol</h3>
+                <p className="text-xs text-[#e5beb2]">Define target habits for daily biometric tracking</p>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 rounded-full bg-[#2a2a2c] hover:bg-[#353437] text-white flex items-center justify-center transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
 
             {errorMsg && (
-              <div className="p-2.5 mb-3 rounded-xl bg-red-950/60 border border-red-500/30 text-red-300 text-xs text-center">
+              <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/30 text-red-300 text-xs font-medium">
                 {errorMsg}
               </div>
             )}
 
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveHabit(); }}>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Habit Title</label>
-                  <input
-                    required
-                    className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e]"
-                    placeholder="e.g. Morning 5K Run"
-                    value={newHabit.name}
-                    onChange={(e) => setNewHabit((p) => ({ ...p, name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-1 block">Description</label>
-                  <textarea
-                    className="w-full rounded-xl px-3.5 py-2.5 text-xs bg-[#0e0e10] border border-[#5c4037]/30 text-[#e5e1e4] focus:outline-none focus:border-[#ff570e] resize-none"
-                    placeholder="Specify daily routine details..."
-                    rows={2}
-                    value={newHabit.description}
-                    onChange={(e) => setNewHabit((p) => ({ ...p, description: e.target.value }))}
-                  />
-                </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d] mb-1.5">
+                  Habit Title *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 5:00 AM Gym Session, 30 Min Reading..."
+                  value={newHabit.name}
+                  onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-[#131315] border border-[#353437] text-white text-sm focus:outline-none focus:border-[#ff570e] transition-colors"
+                />
               </div>
 
-              {/* Category selector */}
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#e5beb2] mb-2 block">Category</label>
-                <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d] mb-1.5">
+                  Description (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Complete chest workout & 15m cardio"
+                  value={newHabit.description}
+                  onChange={(e) => setNewHabit({ ...newHabit, description: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#131315] border border-[#353437] text-white text-sm focus:outline-none focus:border-[#ff570e] transition-colors resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-[#ffb59d] mb-2">
+                  Category
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.key}
                       type="button"
                       onClick={() => setSelectedCategory(cat.key)}
-                      className="px-3 py-2 rounded-xl flex items-center gap-1.5 text-xs font-semibold transition-all flex-shrink-0"
-                      style={{
-                        background: selectedCategory === cat.key ? cat.bg : "#201f21",
-                        border: `1px solid ${selectedCategory === cat.key ? cat.color : "#353437"}`,
-                        color: selectedCategory === cat.key ? cat.color : "#e5beb2",
-                      }}
+                      className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                        selectedCategory === cat.key
+                          ? "bg-[#2a2a2c] border-[#ff570e] shadow-[0_0_12px_rgba(255,87,14,0.3)]"
+                          : "bg-[#131315] border-[#353437] opacity-60 hover:opacity-100"
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-sm">{cat.icon}</span>
-                      <span>{cat.label}</span>
+                      <span className="material-symbols-outlined text-lg" style={{ color: cat.color }}>
+                        {cat.icon}
+                      </span>
+                      <span className="text-[10px] font-bold text-white">{cat.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Selfie Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0e0e10] border border-[#5c4037]/20">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#ffb59d]" style={{ fontSize: 20 }}>fingerprint</span>
-                  <div>
-                    <p className="text-xs font-bold text-white">Require Selfie Verification</p>
-                    <p className="text-[10px] text-[#e5beb2]">AI Biometric proof of execution</p>
-                  </div>
+              {/* Biometric Toggle */}
+              <div className="p-4 rounded-xl bg-[#131315] border border-[#353437] flex items-center justify-between">
+                <div className="space-y-0.5 pr-3">
+                  <p className="text-xs font-bold text-white">Require Biometric Facial Proof</p>
+                  <p className="text-[10px] text-[#e5beb2]">Enforces AI facial validation & liveness check before logging streak</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={newHabit.selfieRequired}
-                    onChange={(e) => setNewHabit((p) => ({ ...p, selfieRequired: e.target.checked }))}
-                  />
-                  <div
-                    className="w-10 h-5 rounded-full relative transition-colors"
-                    style={{ background: newHabit.selfieRequired ? "#ff570e" : "#353437" }}
-                  >
-                    <div
-                      className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all"
-                      style={{ left: newHabit.selfieRequired ? "calc(100% - 18px)" : "2px" }}
-                    />
-                  </div>
-                </label>
+                <input
+                  type="checkbox"
+                  checked={newHabit.selfieRequired}
+                  onChange={(e) => setNewHabit({ ...newHabit, selfieRequired: e.target.checked })}
+                  className="w-5 h-5 accent-[#ff570e] cursor-pointer"
+                />
               </div>
+            </div>
 
+            <div className="pt-2 flex items-center gap-3">
               <button
-                type="submit"
-                disabled={isSaving}
-                className="w-full py-3 rounded-xl text-sm font-bold tracking-wider uppercase active:scale-[0.98] transition-all bg-[#ff570e] text-[#511500] shadow-[0_2px_14px_rgba(255,87,14,0.4)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-3 rounded-xl bg-[#2a2a2c] text-white text-xs font-bold uppercase hover:bg-[#353437] transition-all cursor-pointer"
               >
-                {isSaving ? (
-                  <>
-                    <span className="material-symbols-outlined animate-spin text-sm">sync</span>
-                    Creating Habit...
-                  </>
-                ) : (
-                  "Save Habit"
-                )}
+                Cancel
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={saveHabit}
+                disabled={isSaving || !newHabit.name.trim()}
+                className="flex-1 py-3 rounded-xl bg-[#ff570e] hover:bg-[#ff6f30] text-[#511500] text-xs font-bold uppercase transition-all shadow-[0_4px_16px_rgba(255,87,14,0.4)] disabled:opacity-50 cursor-pointer"
+              >
+                {isSaving ? "Creating..." : "Save Protocol"}
+              </button>
+            </div>
           </div>
         </div>
       )}
